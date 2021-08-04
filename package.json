@@ -1,0 +1,19 @@
+{
+  "name": "orient-express",
+  "version": "1.0.0",
+  "description": "fast way to buy web site",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Famobuty-Co/Orient-Express.git"
+  },
+  "author": "Mote",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Famobuty-Co/Orient-Express/issues"
+  },
+  "homepage": "https://github.com/Famobuty-Co/Orient-Express#readme"
+}
