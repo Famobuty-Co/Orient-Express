@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/Famobuty-Co/Orient-Express/issues"
   },
-  "homepage": "https://github.com/Famobuty-Co/Orient-Express#readme"
+  "homepage": "https://github.com/Famobuty-Co/Orient-Express#readme",
+  "dependencies": {
+    "mysql": "^2.18.1"
+  }
 }
