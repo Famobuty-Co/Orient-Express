@@ -1,4 +1,16 @@
-const mysql = require("mysql")
+class VARCHAR{}
+class INT{}
+class FLOAT{}
+class DATETIME{}
+class BOOL{}
+class DECIMAL{}
+
+
+
+var datatypes = {VARCHAR,INT,FLOAT,DATETIME,BOOL,DECIMAL}
+
+const {exec,spawn,execSync} = require('child_process')
+const { table } = require('console')
 
 class SHIJUKU{
 	databases = {}
@@ -161,9 +173,18 @@ function Read(){
 }
 class Database{
 	_tables = []
+	constructor(database){
+		this.name = database
+		sqlite_exec(database,'.exit')
+	}
 	Register(_table){
 		this._tables.push(_table)
 		this[_table.name] = new Table(_table.clazz)
+		var values=_table.row.map(x=>`${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`)
+		this.run(`create table ${_table.name}(id int NOT NULL AUTO_INCREMENT, ${values});`)
+	}
+	run(sql){
+		console.log(sql)
 	}
 }
 class Table{
@@ -183,14 +204,32 @@ class Table{
 		return this._array.filter(condition).map(list)
 	}
 }
+var isWin = process.platform === "win32";
+const sqlite = __dirname.split('\\').slice(0,-1).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
+function sqlite_exec(database,cmd){
+	var cmd = `${sqlite} ${database} -cmd ${cmd} ;\n .exit`
+	console.log(database,sqlite,cmd)
+	const ls = execSync(cmd,{stdio:[0,1,2],encoding:"string",});
+	console.log(ls,"end")
+	// ls.on('exit', function (code) {
+	// 	console.log('Child process exited with exit code '+code);
+	// });
+
+}
 class Shijuku_Connection{
 	_url = "127.0.0.1"
 	_connect = ()=>{}
 	_connected = false
 	setupCode = []
 	database = new Database()
-	constructor(host,user,password){
+	constructor(host,user,password,database){
 		// this._url = url
+		this.use(database)
+	}
+	use(database){
+		if(database){
+			this.database = new Database(database)
+		}
 		this._connected = true
 		this._connect()
 	}
@@ -206,6 +245,8 @@ class Shijuku_Connection{
 		tables.forEach(table=>{
 			if(typeof table == "string"){
 				this.loadSQL(table)
+			}else if(typeof table == "object"){
+				this.loadObject(table)
 			}else{
 				this.loadClass(table)
 			}
@@ -216,6 +257,15 @@ class Shijuku_Connection{
 		clazz.forEach(table=>{
 			var _table = Classparser(table)
 			this.database.Register(_table)
+		})
+		return this
+	}
+	loadObject(...clazz){
+		clazz.forEach(table=>{
+			var _tables = Objectparser(table)
+			_tables.forEach(_table=>{
+				this.database.Register(_table)
+			})
 		})
 		return this
 	}
@@ -231,6 +281,17 @@ class Shijuku_Connection{
 		}
 	}
 }
+function Objectparser(tables){
+	console.log(tables)
+	var _tables = []
+	for(var table in tables){
+		var _table = {}
+		_table.name = table
+		_table.row = Object.keys(tables[table]).map(x=>{return {name:x,type:tables[table][x]}})
+		_tables.push(_table)
+	}
+	return _tables
+}
 function Classparser(clazz){
 	var table = {}
 	table.clazz = clazz
@@ -243,6 +304,10 @@ function Classparser(clazz){
 		var name = w[0].trim()
 		var value = w.slice(1).join('=').trim()
 		var type = /^new /g.test(value)?value.split(/^new /).slice(1).join('new ').split(/[^a-z]/ig)[0]:(typeof eval(value))
+		switch(type){
+			case "string" : type = "varchar"; break;
+			case "number" : type = "float"; break;
+		}
 		return {
 			value,name,type
 		}
@@ -263,9 +328,20 @@ module.exports = {
 		var host = options.host||"127.0.0.1"
 		var user = options.user||"root"
 		var password = options.password||""
-		if(options.tables){
-			return (new Shijuku_Connection(host,user,password)).load(...options.tables)
+		var database = options.database
+		var sql = null
+		if(database){
+			sql = new Shijuku_Connection(host,user,password,database)
+		}else{
+			sql = new Shijuku_Connection(host,user,password)
 		}
-		return new Shijuku_Connection(host,user,password)
+		if(options.tables){
+			sql.load(options.tables)
+		}
+		return sql
+	},
+	datatypes,
+	select:(opt)=>{
+		return `app.app.sql.select(${JSON.stringify(opt)})`
 	},
 }

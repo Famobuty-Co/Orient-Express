@@ -1,7 +1,12 @@
+const mime = require("./mime")
+const path = require("path")
+const fs = require("fs");
+
 class Response{
-	constructor(res,req){
+	constructor(res,req,app){
 		this._res = res
 		this._req = req
+		this.app = app
 	}
 	format(formats){
 		var _mime = mime.lookup(this._req.url);
@@ -25,7 +30,8 @@ class Response{
 	}
 }
 class Request{
-	constructor(res,req){
+	constructor(res,req,app){
+		this.app = app
 		this._res = res
 		this._req = req
 		this.device = {
