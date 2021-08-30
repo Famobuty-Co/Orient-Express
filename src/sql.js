@@ -9,173 +9,15 @@ class DECIMAL{}
 
 var datatypes = {VARCHAR,INT,FLOAT,DATETIME,BOOL,DECIMAL}
 
-const {exec,spawn,execSync} = require('child_process')
-const { table } = require('console')
+const {exec,spawn,execSync, spawnSync} = require('child_process')
+const fs= require('fs')
+const path = require('path')
 
-class SHIJUKU{
-	databases = {}
-	USE(name){
-		this.database = this.databases[name]
-	}
-	CREATE = {
-		DATABASE:(name)=>{
-			if(!name)return
-			this.databases[name] = new DATABASE
-			return this
-		},
-		TABLE:(name)=>{
-			if(!name)return
-			var args = TABLE.parse(name)
-			this.database.tables[args[0]] = new TABLE(...args)
-			return this
-		},
-	}
-	SELECT(x){
-		return new QUERY_REQUEST(x)
-	}
-	SHOW = {
-		DATABASE:(name)=>{
-			return this.databases[name]||this.databases
-		},
-		TABLE:(name)=>{
-			return this.database.tables[name]||this.database.tables
-		},
-	}
-	INSERT= {
-		INTO:(table)=>{
-			return new INSERT_REQUEST(table)
-		},
-	}
-	GET(name){
-		return this.database.tables[name]
-	}
-}
-class DATABASE{
-	constructor(){
-	}
-	tables = {}
-
-}
-class TABLE{
-	constructor(name,...args){
-		this.name = name
-		this.columns = args
-	}
-	columns = []
-	lines = []
-	static parse(table){
-		table = table.split(',')
-		var args = [table[0],...(table.slice(1).join(',').slice(1,-1).split(',').map((x,n)=>!(n%2)?x:undefined))]
-		return args
-	}
-}
-class INSERT_REQUEST{
-	table = null
-	order = null
-	constructor(table){
-		table = table.split(',')
-		this.table = table[0]
-		this.order = table.slice(1).join(',').slice(1,-1).split(',')
-	}
-	VALUES(values){
-		values = values.slice(1,-1).split(',')
-		//exec
-		var table = GLOBAL.GET(this.table)
-		table.lines.push(new Array(table.columns.length))
-		values.forEach((x,n)=>{
-			var nn
-			if(this.order)
-				nn  = table.columns.indexOf(v=>v==this.order[n])
-			if(nn<0)
-				nn = n||0
-			table.lines[table.lines.length-1][nn] = x
-		})
-	}
-}
-class QUERY_REQUEST{
-	_columns = null
-	_from = null
-	_union = [this]
-	constructor(columns){
-		this.SELECT(columns)
-	}
-	FROM(table){
-		this._from = GLOBAL.GET(table)
-		var res = this._from
-		console.log(res)
-		return res.lines
-		// return this
-	}
-	get UNION(){
-		var _u = new QUERY_REQUEST
-		this._union.push(_u)
-		_u._union = this._union
-		return _u
-	}
-	SELECT(columns=""){
-		this._columns = columns.split(',')
-		return this
-	}
-}
-var SQL = new SHIJUKU;
-var GLOBAL = SQL;
-var KeyWord = new Set()
-KeyWord.add('CREATE')
-KeyWord.add('USE')
-KeyWord.add('SHOW')
-KeyWord.add('TABLE')
-KeyWord.add('DATABASE')
-KeyWord.add('SELECT')
-KeyWord.add('FROM')
-KeyWord.add('UNION')
-KeyWord.add('INSERT')
-KeyWord.add('INTO')
-KeyWord.add('VALUES')
-function SQLExec(sql){
-	var rsls = []
-	sql = sql.toUpperCase()
-	sql = sql.split(';').map(x=>{
-		x = x.trim()
-		if(x.length<1)return
-		var cmd = ""
-		var args = []
-		x = x.split(/\ |\,/).forEach(x=>{
-			if(x.length<1)return
-			if(KeyWord.has(x)){
-				if(args.length){
-					cmd += "(`"+args+"`)"
-					args = []
-				}
-				cmd += "."+x
-			}else{
-				args.push(x)
-			}
-		})
-		cmd = "GLOBAL"+cmd+"(`"+args+"`)"
-		rsls.push(eval(cmd))
-	})
-	return rsls
-}
-
-function Read(){
-	const fs = require('fs');
-	const readline = require('readline');
-
-	const rl = readline.createInterface({
-		input: fs.createReadStream('file.txt'),
-		output: process.stdout,
-		terminal: false
-	});
-
-	rl.on('line', (line) => {
-		console.log(line);
-	});
-}
 class Database{
 	_tables = []
 	constructor(database){
 		this.name = database
-		sqlite_exec(database,'.exit')
+		// sqlite_exec(database,'')
 	}
 	Register(_table){
 		this._tables.push(_table)
@@ -183,8 +25,8 @@ class Database{
 		var values=_table.row.map(x=>`${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`)
 		this.run(`create table ${_table.name}(id int NOT NULL AUTO_INCREMENT, ${values});`)
 	}
-	run(sql){
-		console.log(sql)
+	run(sql,callback=()=>{}){
+		return sqlite_exec(this.name,sql,null,callback)
 	}
 }
 class Table{
@@ -206,15 +48,31 @@ class Table{
 }
 var isWin = process.platform === "win32";
 const sqlite = __dirname.split('\\').slice(0,-1).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
-function sqlite_exec(database,cmd){
-	var cmd = `${sqlite} ${database} -cmd ${cmd} ;\n .exit`
-	console.log(database,sqlite,cmd)
-	const ls = execSync(cmd,{stdio:[0,1,2],encoding:"string",});
-	console.log(ls,"end")
-	// ls.on('exit', function (code) {
-	// 	console.log('Child process exited with exit code '+code);
-	// });
-
+function sqlite_init(database,initfileorsqltable){
+	sqlite_exec(database,initfileorsqltable,["init"])
+}
+function sqlite_exec(database,sql,args=["cmd","json","bail"],callback){
+	if(!database)return
+	if(database.includes(' '))throw "Invalid database"
+	if(!path.isAbsolute(database)){
+		database = "./"+database
+	}
+	if(!fs.existsSync(database))throw `Database "${database}" not exist`
+	if(!Array.isArray(sql)){
+		if(database.includes('"'))throw `command replace '"' by an other character : '${sql}'`
+		cmd = `${sqlite} ${database} "${sql}" -json`
+		exec(cmd,{
+			stdio:[0,1,2],
+			encoding:"string",
+		},(err,stdio,stderr)=>{
+			if(err){
+				throw err
+			}
+			callback(`${stdio}`,stderr)
+		});
+	}else{
+		cmd = `${sqlite} ${database} ${args.map((_,n)=>" -"+args[n]+" "+(sql[n]||"")).join('')}`
+	}
 }
 class Shijuku_Connection{
 	_url = "127.0.0.1"
@@ -271,7 +129,13 @@ class Shijuku_Connection{
 	}
 	loadSQL(...sql){
 		sql.forEach(table=>{
+			if(fs.existsSync(table)){
+				console.log(table)
+				if(table.endsWith('.sql'))
+					sqlite_init(this.database.name,table)
+			}else{
 
+			}
 		})
 		return this
 	}
@@ -323,6 +187,9 @@ function Classparser(clazz){
 	table.row = dclar.reduce((p,o)=>{if(o.name){p.push(o)};return p},[])
 	return table
 }
+const execSQLObject = (opt,app)=>{
+	console.log(opt,"app")
+}
 module.exports = {
 	createConnection:(options)=>{
 		var host = options.host||"127.0.0.1"
@@ -338,10 +205,19 @@ module.exports = {
 		if(options.tables){
 			sql.load(options.tables)
 		}
+		if(options.init){
+			if(fs.existsSync(options.init) && !fs.existsSync(database)){
+				sqlite_init(database,options.init)
+			}
+		}
+		if(options.check){
+			sqlite_exec(database,".show")
+		}
 		return sql
 	},
 	datatypes,
+	exec,
 	select:(opt)=>{
-		return `app.app.sql.select(${JSON.stringify(opt)})`
+		return (app)=>{execSQLObject(opt,app)}
 	},
 }

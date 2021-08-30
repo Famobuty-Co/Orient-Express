@@ -10,7 +10,6 @@ function loadFile(file){
 		file = file=="/"?"index.html":file;
 		file="./"+file
 	}
-	console.log("\t loadfile",file,fs.existsSync(file));
 	if(fs.existsSync(file)){
 		return fs.readFileSync(file,{encoding:'utf8', flag:'r'})
 	}else{
@@ -71,9 +70,8 @@ const orient = {
 			options.app = options.request.app||options.response.app||orient
 		}
 		OrientJS = (new Function("orient","app",
-		`var _echo_msg = [];console.log("app = ",app);
-		const echo = (...value)=>{_echo_msg.push(...value);
-			console.log(value);};
+		`var _echo_msg = [];
+		const echo = (...value)=>{_echo_msg.push(...value);};
 			with(orient){${OrientJS}};return _echo_msg.join('')`))(orient.libs,options)
 		return OrientJS
 	},
@@ -154,7 +152,6 @@ class App{
 			var action = this.accesTable.find(req.method,req.url)
 			var _res = new web.Response(res,req,this)
 			var _req = new web.Request(res,req,this)
-			console.log(action.toString(),req.method,req.url)
 			if(action==noop){
 				res.end(`<script>location.assign("${this.errorPage||this.accesTable.sort()[0]}")</script>`)
 			}else{
