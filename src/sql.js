@@ -1,53 +1,132 @@
 class VARCHAR{}
-class INT{}
+class INTEGER{}
 class FLOAT{}
 class DATETIME{}
-class BOOL{}
+class BOOLEAN{}
 class DECIMAL{}
+class DATE{}
 
 
 
-var datatypes = {VARCHAR,INT,FLOAT,DATETIME,BOOL,DECIMAL}
+var datatypes = {VARCHAR,INTEGER,FLOAT,DATETIME,BOOLEAN,DECIMAL,DATE,INT:INTEGER,}
 
 const {exec,spawn,execSync, spawnSync} = require('child_process')
 const fs= require('fs')
 const path = require('path')
+const { runInNewContext } = require('vm')
+const { Event } = require('./event')
 
-class Database{
+class Database extends Event{
+	isConnected = false
 	_tables = []
 	constructor(database){
+		super()
 		this.name = database
 		// sqlite_exec(database,'')
+		this.runPromise(".tables").then(stat=>{
+			if(!stat)return
+			stat = stat.match(/\w+/g)
+			var c = stat.length
+			stat.forEach(_name=>{
+				this.runPromise(".schema "+_name).then(_table=>{
+					console.log(_table,c)
+					_table = SQLparser(_table).tables[0]
+					this._tables.push(_table)
+					this[_table.name] = new Table(this,_table)
+					c--
+					if(c<=0){
+						this.isConnected = true
+						this.onconnected()
+					}
+				})
+			})
+		})
 	}
+	onconnected(){}
 	Register(_table){
 		this._tables.push(_table)
-		this[_table.name] = new Table(_table.clazz)
-		var values=_table.row.map(x=>`${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`)
-		this.run(`create table ${_table.name}(id int NOT NULL AUTO_INCREMENT, ${values});`)
+		this[_table.name] = new Table(this,_table)
+		var exist = this.run(`.schema ${_table.name}`)
+		if(exist){
+			var _table2 = SQLparser(exist).tables[0]
+			exist = _table2.row.reduce((p,o)=>{
+				if(!_table.row.map(x=>x.name).includes(o.name)){
+					p.push(o)
+				}
+				return p
+			},[])
+		}
+		if(!exist || exist.length==_table.row.length){
+			var values=_table.row.map(x=>`${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`)
+			this.run(`create table ${_table.name}(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,${values});`)
+		}else if(exist.length!=0){
+			var values=exist.map(x=>{
+				x = `${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`
+				return `alter table ${_table.name} ADD ${x};`
+			})
+			this.run(values.join('\n'))
+		}
+
 	}
-	run(sql,callback=()=>{}){
-		return sqlite_exec(this.name,sql,null,callback)
+	runPromise(sql,callback=()=>{}){
+		var p = new Promise((resolve,reject)=>{
+			sqlite_exec(this.name,sql,null,resolve)
+		})
+		if(callback){
+			p.then(callback)
+		}
+		return p
+	}
+	run(sql){
+		console.log(sql)
+		return sqlite_exec(this.name,sql,null)
 	}
 }
 class Table{
 	_array = []
-	constructor(CLAZZ = Object){
-		this.CLAZZ = CLAZZ
+	_Insert = []
+	constructor(database,data = {name:"view",}){
+		this.database = database
+		this.name = data.name
+		if(data.clazz){
+			this.CLAZZ = data.clazz
+		}else{
+			this.CLAZZ
+		}
 	}
 	insert(...items){
 		items.forEach(item=>{
 			if(item instanceof this.CLAZZ)
-			this._array.push(item)
+			this._Insert.push(item)
 		})
 	}
-	select(list,condition){
-		if(!list)list = (clazz)=>clazz
-		if(!condition)condition = ()=>true
-		return this._array.filter(condition).map(list)
+	select(columns = "*",condition){
+		var where = ""
+		if(Object.keys(condition).length){
+			where = "WHERE " 
+			for(var name in condition){
+				var value = condition[name]
+				if(typeof value == "number")value = " = "+value
+				where += `${name} ${value} `
+			}
+		}
+		var statement = this.database.run(`SELECT ${columns} FROM ${this.name} ${where}`)
+		statement = eval(statement)||[]
+			if(columns == "*"){
+				statement.forEach(row=>{
+				this._array[runInNewContext.ID] = row
+			})
+		}
+		return statement
 	}
 }
 var isWin = process.platform === "win32";
 const sqlite = __dirname.split('\\').slice(0,-1).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
+const createdb = __dirname.split('\\').slice(0,-1).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
+function sqlite_create(database){
+	var cmd = `${createdb} ${database}`
+	return execSync(cmd)
+}
 function sqlite_init(database,initfileorsqltable){
 	sqlite_exec(database,initfileorsqltable,["init"])
 }
@@ -57,45 +136,54 @@ function sqlite_exec(database,sql,args=["cmd","json","bail"],callback){
 	if(!path.isAbsolute(database)){
 		database = "./"+database
 	}
-	if(!fs.existsSync(database))throw `Database "${database}" not exist`
+	//if(!fs.existsSync(database))throw `Database "${database}" not exist`//when you setup it can exist
 	if(!Array.isArray(sql)){
 		if(database.includes('"'))throw `command replace '"' by an other character : '${sql}'`
 		cmd = `${sqlite} ${database} "${sql}" -json`
-		exec(cmd,{
+		var out = execSync(cmd)
+		/*,{
 			stdio:[0,1,2],
 			encoding:"string",
 		},(err,stdio,stderr)=>{
 			if(err){
 				throw err
 			}
-			callback(`${stdio}`,stderr)
-		});
+			//callback(`${stdio}`,stderr)
+		});*/
+		out = out.toString()
+		if(callback){
+			callback(out)
+		}else{
+			return out
+		}
+
 	}else{
 		cmd = `${sqlite} ${database} ${args.map((_,n)=>" -"+args[n]+" "+(sql[n]||"")).join('')}`
 	}
 }
-class Shijuku_Connection{
+class Shijuku_Connection extends Event{
 	_url = "127.0.0.1"
 	_connect = ()=>{}
 	_connected = false
 	setupCode = []
 	database = new Database()
 	constructor(host,user,password,database){
+		super()
 		// this._url = url
+		database = `${database}.db`
+		sqlite_create(database)
 		this.use(database)
 	}
 	use(database){
 		if(database){
 			this.database = new Database(database)
+			this.database.on('connected',()=>{
+				this._connected = true
+				this.onconnected()
+			})
 		}
-		this._connected = true
-		this._connect()
 	}
-	connect(callback){
-		this._connect = callback
-		if(this._connected)
-			this._connect()
-	}
+	onconnected(){}
 	query(sql,callback){
 		console.log(sql," : ",SQLExec(sql))
 	}
@@ -134,7 +222,7 @@ class Shijuku_Connection{
 				if(table.endsWith('.sql'))
 					sqlite_init(this.database.name,table)
 			}else{
-
+				SQLparser(sql)
 			}
 		})
 		return this
@@ -145,13 +233,46 @@ class Shijuku_Connection{
 		}
 	}
 }
+function SQLparser(sql){
+	var cmds = sql.split(';')
+	var sql_O = {
+		tables:[],
+	}
+	cmds.forEach(cmd=>{
+		cmd = cmd.split(' ')
+		switch(cmd[0].toLowerCase()){
+			case "create":{
+				if(cmd[1].toLowerCase() == "table"){
+					var t = {}
+					t.name = cmd[2]
+					var line = cmd.slice(cmd.find((a)=>{a=="("})).join(' ')
+					t.row = line.split(/\,[\r\n\t]*/).map(x=>{
+						x = x.trim().split(' ');
+						var typ = x[1].match(/[a-z]*/ig)[0]
+						if(datatypes[typ]){
+							return {name:x[0],type:x[1]}
+						}
+					}).reduce((p,o)=>{if(o)p.push(o);return p},[])
+					sql_O.tables.push(t)
+				}
+			}break;
+		}
+	})
+	return sql_O
+}
 function Objectparser(tables){
-	console.log(tables)
 	var _tables = []
 	for(var table in tables){
 		var _table = {}
 		_table.name = table
-		_table.row = Object.keys(tables[table]).map(x=>{return {name:x,type:tables[table][x]}})
+		_table.row = Object.keys(tables[table]).map(x=>{
+			var tp = tables[table][x]
+			if(!datatypes[tp])tp = "INTEGER"
+			return {
+				name:x,
+				type:tp
+			}
+		})
 		_tables.push(_table)
 	}
 	return _tables
@@ -190,6 +311,7 @@ function Classparser(clazz){
 const execSQLObject = (opt,app)=>{
 	console.log(opt,"app")
 }
+var connections = []
 module.exports = {
 	createConnection:(options)=>{
 		var host = options.host||"127.0.0.1"
@@ -202,22 +324,25 @@ module.exports = {
 		}else{
 			sql = new Shijuku_Connection(host,user,password)
 		}
+		connections.push(sql)
 		if(options.tables){
 			sql.load(options.tables)
 		}
+		/*
 		if(options.init){
 			if(fs.existsSync(options.init) && !fs.existsSync(database)){
 				sqlite_init(database,options.init)
 			}
-		}
-		if(options.check){
-			sqlite_exec(database,".show")
-		}
+		}*/
 		return sql
 	},
 	datatypes,
 	exec,
-	select:(opt)=>{
-		return (app)=>{execSQLObject(opt,app)}
+	select:({database,table,column,where})=>{
+		console.log(database,table,column,where)
+		var con = connections.find(x=>x.database.name==database)
+		if(!con.database[table])throw "unkonw table "+table
+		con.database[table].select(column,where)
+		return 
 	},
 }

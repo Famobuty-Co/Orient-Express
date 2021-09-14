@@ -3,12 +3,16 @@ const fs = require("fs");
 const path = require("path");
 const Route = require("./src/route.js");
 const SQL = require("./src/sql.js");
+const {Event} = require("./src/event.js");
 const web = require("./src/web.js");
 
 function loadFile(file){
 	if(!path.isAbsolute(file)){
 		file = file=="/"?"index.html":file;
 		file="./"+file
+	}
+	if(!fs.existsSync(file) && fs.existsSync(file+".html")){
+		file += ".html"
 	}
 	if(fs.existsSync(file)){
 		return fs.readFileSync(file,{encoding:'utf8', flag:'r'})
@@ -47,7 +51,15 @@ const orient = {
 		},
 		orient:(file)=>{
 			return {
-				default:function (req, res) {if(!file){file = req.originalUrl.split('/').slice(-1).join('/');if(file.search('.')==-1){file+="index.html"}};var dir = "./"+req.originalUrl.split('/').slice(0,-1).join('/')+"/";var content = loadFile(dir+file);content = orient.parse(content,{request:req,response:res});res.send(content)},
+				default:function (req, res) {
+					if(!file){
+						file = req.originalUrl.split('/').slice(-1).join('/');
+						if(file.search('.')==-1){file+="index.html"}};
+						var dir = "./"+req.originalUrl.split('/').slice(0,-1).join('/')+"/";
+						var content = loadFile(dir+file);
+						console.log(dir+file)
+						content = orient.parse(content,{request:req,response:res});
+						res.send(content)},
 				static:true,
 			}
 		},
@@ -72,7 +84,10 @@ const orient = {
 		OrientJS = (new Function("orient","app",
 		`var _echo_msg = [];
 		const echo = (...value)=>{_echo_msg.push(...value);};
-			with(orient){${OrientJS}};return _echo_msg.join('')`))(orient.libs,options)
+		with(orient){
+			${OrientJS}
+		};
+		return _echo_msg.join('')`))(orient.libs,options)
 		return OrientJS
 	},
 	parse : function(OrientHTML,options){
@@ -109,10 +124,12 @@ const orient = {
 	},
 }
 
-class App{
+class App extends Event{
 	constructor(data){
+		super()
 		this.accesTable = new Route()
 		this.shortcut = data.shortcut||{}
+		this.port = data.port
 		for(var key in data){
 			var value = orient.shortcut.parse(data[key],this.shortcut)
 			
@@ -144,8 +161,11 @@ class App{
 				}
 			}
 		}
-		if(data.port)
-			this.listen(data.port)
+		
+	}
+	login(port = this.port){
+		if(port)
+			this.listen(port)
 	}
 	listen(port,callback){
 		http.createServer((req, res)=>{
@@ -159,7 +179,13 @@ class App{
 			}
 		}).listen(port);
 		// callback()
+		console.log("html route make")
+		this.sql.on("connected",()=>{
+			console.log("sql connected")
+			this.onready()
+		})
 	}
+	onready(){}
 	use(path,callback){
 		this.method(null,path,callback)
 	}
