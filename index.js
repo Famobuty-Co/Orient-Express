@@ -5,6 +5,10 @@ const Route = require("./src/route.js");
 const SQL = require("./src/sql.js");
 const {Event} = require("./src/event.js");
 const web = require("./src/web.js");
+const {Form} = require("./src/form.js");
+const bundles = require("./src/bundles.js");
+const debug = require("./src/console");
+const {noop} = require("./src/static");
 
 function loadFile(file){
 	if(!path.isAbsolute(file)){
@@ -21,7 +25,6 @@ function loadFile(file){
 	}
 }
 const include = loadFile
-const noop = ()=>{}
 const orient = {
 	acces:{
 		free:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0])},
@@ -49,6 +52,9 @@ const orient = {
 		file:(file)=>{
 			return function (req, res) {res.sendFile(file)}
 		},
+		root:function(){
+			return this.orient("./index.html")
+		},
 		orient:(file)=>{
 			return {
 				default:function (req, res) {
@@ -74,7 +80,11 @@ const orient = {
 					}
 		}
 	},
-	include,
+	include:function(file,params){
+		var content = loadFile(file)
+		content = orient.parse(content,params);
+		return content
+	},
 	execute : (OrientJS,options = {})=>{
 		if(!options.request)options.request = {}
 		if(!options.response)options.response = {}
@@ -87,25 +97,39 @@ const orient = {
 		with(orient){
 			${OrientJS}
 		};
-		return _echo_msg.join('')`))(orient.libs,options)
+		return _echo_msg.join('')`))(orient.libs,options);
 		return OrientJS
 	},
-	parse : function(OrientHTML,options){
-		OrientHTML = OrientHTML.split('<?orient')
-		OrientJS = OrientHTML.slice(1).map(w=>w.split("?>")[0])
+	parse : function(OrientHTML,options={}){
+		var startBlock = /<\?orient/
+		var endBlock = /\?>/
+		try{
 
-		OrientJS = OrientJS.map(x=>{
-			return this.execute(x,options)
-		})
-
-		OrientHTML = OrientHTML.map((w,n)=>{
-			if(n==0)return w
-			w = w.split("?>")
-			w[0] = OrientJS[n-1]
-			return w.join('')
-		}).join('')
-
-		return OrientHTML
+			OrientHTML = OrientHTML.split(startBlock)
+			OrientJS = OrientHTML.slice(1).map(w=>w.split(endBlock)[0])
+			
+			OrientJS = OrientJS.map(x=>{
+				return this.execute(x,options)
+			})
+			
+			OrientHTML = OrientHTML.map((w,n)=>{
+				if(n==0)return w
+				w = w.split(endBlock)
+				w[0] = OrientJS[n-1]
+				return w.join('')
+			}).join('')
+			try{
+				var app = (options.request||options.response||orient).app
+				OrientHTML = (new Function("orient","app","options",`console.log(orient.libs);with(orient){with(orient.libs){with(app){with(options){html = \`${OrientHTML}\`}}}};return html`))(orient,app,options)
+			}catch(e){
+				debug.error(e);
+			}
+			
+			return OrientHTML
+		}catch(e){
+			debug.error(e);
+			return OrientHTML
+		}
 	},
 	libs : {},
 	"use":function(name,lib){
@@ -149,19 +173,40 @@ class App extends Event{
 					case "sql":
 						this.sql = SQL.createConnection(value);
 					break;
+					case "template":
+						this.template = value
+						var nav = this.template.nav||{}
+						var mth = orient.acces[data.requestMethode||'orient']()
+						for (var item of nav){
+							for(var method in mth){
+								this.method(method,`/${item}`,mth[method])
+							}
+						}
+					break;
 					case "libs":
 						for(var lib in value){
 							var obj = {}
-							for(var _var in value[lib]){
-								obj[_var] = orient.shortcut.parse(value[lib][_var],this.shortcut)
+							if(typeof lib == "object"){
+								for(var _var in value[lib]){
+									obj[_var] = orient.shortcut.parse(value[lib][_var],this.shortcut)
+								}
+							}else{
+								obj = orient.shortcut.parse(value[lib],this.shortcut)||value
 							}
 							orient.use(lib,obj)
 						}
 					break;
+					case "admin":
+					case "administrator":
+						var ad = new bundles.AdminPanel(value)
+						this.method("default",`/${value.url||"admin"}`,orient.acces.create((req,res)=>{
+							ad.toPage(req).then(html=>res.send(html))
+						}))
+					break;
 				}
 			}
 		}
-		
+		orient.app = this
 	}
 	login(port = this.port){
 		if(port)
@@ -170,20 +215,30 @@ class App extends Event{
 	listen(port,callback){
 		http.createServer((req, res)=>{
 			var action = this.accesTable.find(req.method,req.url)
+			debug.info(req.url)
 			var _res = new web.Response(res,req,this)
 			var _req = new web.Request(res,req,this)
-			if(action==noop){
-				res.end(`<script>location.assign("${this.errorPage||this.accesTable.sort()[0]}")</script>`)
-			}else{
-				action(_req,_res)
+			try{
+				if(action==noop){
+					res.end(`<script>location.assign("${this.errorPage||this.accesTable.sort()[0]}")</script>`)
+				}else{
+					action(_req,_res)
+				}
+			}catch(e){
+				debug.error(e)
+				res.end()
 			}
 		}).listen(port);
 		// callback()
 		console.log("html route make")
-		this.sql.on("connected",()=>{
-			console.log("sql connected")
+		if(this.sql){
+			this.sql.on("connected",()=>{
+				console.log("sql connected")
+				this.onready()
+			})
+		}else{
 			this.onready()
-		})
+		}
 	}
 	onready(){}
 	use(path,callback){
@@ -201,6 +256,9 @@ class App extends Event{
 		if(!method)method = "default"
 		this.accesTable.append(path,{method:method.toUpperCase(),callback})
 	}
+	makeForm(...args){
+		return Form.create(...args)
+	}
 }
 
 orient.express = function(data){
@@ -209,5 +267,6 @@ orient.express = function(data){
 orient.express.static = function(){
 
 }
+orient.makeForm = Form.create
 
 module.exports = orient

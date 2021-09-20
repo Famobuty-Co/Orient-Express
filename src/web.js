@@ -1,6 +1,8 @@
 const mime = require("./mime")
 const path = require("path")
 const fs = require("fs");
+const { Component } = require("./ui");
+const debug = require("./console");
 
 class Response{
 	constructor(res,req,app){
@@ -14,6 +16,9 @@ class Response{
 		(formats[_mime]||formats.default)()
 	}
 	send(text){
+		if(text instanceof Component){
+			text = text.toString()
+		}
 		this._res.end(text)
 	}
 	sendFile(file){
@@ -29,33 +34,63 @@ class Response{
 		}
 	}
 }
+function parserQuery(search){
+	const query = {};
+	if(search.length){
+		if(search.startsWith("?"))search = search.substring(1)
+		search.split('&').forEach(data=>{
+			var [name,value] = data.split('=')
+			value = value.replace(/\%20/g," ")
+			value = value.replace(/\%C3/g,"")
+			value = value.replace(/\%A9/g,"é")
+			value = value.replace(/\%E2%82%AC/g,"€")
+			
+			query[name] = value
+		})
+	}
+	return query
+}
 class Request{
 	constructor(res,req,app){
 		this.app = app
 		this._res = res
 		this._req = req
+		this.data = ""
+		this._req.on('data',chunk=>{
+			this.data+=chunk
+		})
+		this._req.on('end',()=>{
+			debug.info(this.data)
+		})
 		this.device = {
 			type:/mobile/ig.test(res["user-agent"])?"PHONE":"DESKTOP"
 		}
 		this.originalUrl = req.url
-		const query = {};
+
 		var s = req.url.search(/\?/)
 		this.search = s>=0?req.url.slice(s):""
-		if(this.search.length){
-			this.search.substring(1).split('&').forEach(data=>{
-				var [name,value] = data.split('=')
-				value = value.replace(/\%20/g," ")
-				value = value.replace(/\%C3/g,"")
-				value = value.replace(/\%A9/g,"é")
-				value = value.replace(/\%E2%82%AC/g,"€")
-				
-				query[name] = value
-			})
-		}
-		this.query = query
+
+		this.query = parserQuery(this.search)
 		this.path = req.url.split("/").slice(0,-1).join('/')
 		this.page = req.url.split("/").slice(-1).join('/')
 		this.file = this.page.search('.')!=-1?this.page:null
+	}
+	get method(){
+		return this._req.method.toUpperCase()
+	}
+	get header(){
+		console.log(this._req)
+		return this._req.getRawHeaderNames().map(x=>this._req.getHeader(x))||[]
+	}
+	get body(){
+		return this.data
+	}
+	async getBody(){
+		return new Promise((resolve)=>{
+			this._req.on('end',()=>{
+				resolve(parserQuery(this.data))
+			})
+		})
 	}
 }
 module.exports = {

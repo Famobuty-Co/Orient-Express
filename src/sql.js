@@ -22,11 +22,21 @@ class Database extends Event{
 	constructor(database){
 		super()
 		this.name = database
+		const conxion = ()=>{
+			console.log("connected to the base")
+			this.isConnected = true
+			this.onconnected()
+		}
 		// sqlite_exec(database,'')
 		this.runPromise(".tables").then(stat=>{
-			if(!stat)return
+			console.log(stat)
+			if(!stat){
+				conxion()
+				return
+			}
 			stat = stat.match(/\w+/g)
 			var c = stat.length
+			console.log("connection in "+c+"...")
 			stat.forEach(_name=>{
 				this.runPromise(".schema "+_name).then(_table=>{
 					console.log(_table,c)
@@ -34,9 +44,9 @@ class Database extends Event{
 					this._tables.push(_table)
 					this[_table.name] = new Table(this,_table)
 					c--
+					console.log("connection in "+c+"...")
 					if(c<=0){
-						this.isConnected = true
-						this.onconnected()
+						conxion()
 					}
 				})
 			})
@@ -177,8 +187,10 @@ class Shijuku_Connection extends Event{
 	use(database){
 		if(database){
 			this.database = new Database(database)
+			console.log("conection to database")
 			this.database.on('connected',()=>{
 				this._connected = true
+				console.log("conected to database")
 				this.onconnected()
 			})
 		}
@@ -342,7 +354,6 @@ module.exports = {
 		console.log(database,table,column,where)
 		var con = connections.find(x=>x.database.name==database)
 		if(!con.database[table])throw "unkonw table "+table
-		con.database[table].select(column,where)
-		return 
+		return con.database[table].select(column,where)
 	},
 }

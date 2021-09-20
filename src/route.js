@@ -1,4 +1,4 @@
-const noop = ()=>{}
+const {noop} = require("./static")
 
 function compareString(a,b){
 	var i = 0
