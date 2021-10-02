@@ -1,16 +1,17 @@
 # Orient-Express
+fast way to build web site
 
-The fast way to build your websites.
-```
 const orient = require("../Orient-Express");
 const app = orient.express({
-  /* set page and route */
 	"/":"$orient.acces.orient()",
 	"/css/style.css":"$orient.acces.free",
+  /* set page and route */
 	"port":8080,
-  /* create your db with json */
-	"database":{
-		"name":"Famobuty",
+	"sql":{
+		"host": "localhost",
+		"user": "root",
+		"password": "",
+		"database":"Famobuty",
 		"tables":{
 			"User":{
 				"username" : "VARCHAR(255)",
@@ -20,30 +21,14 @@ const app = orient.express({
 				"phonenumber" : "VARCHAR(255)",
 				"password" : "VARCHAR(255)"
 			},
+      /* create your db with json */
 		},
 	},
 	"shortcut":{
 		"script":"$"
 	},
 	"libs":{
-  	  /* set inside variables librairies*/
+    /*variables et librairies*/
 	}
 })
-app.login()//start all server
-```
-## Summary
-[Documentation](#docs)
-
-## Docs
-### Webserver Docs
-If you start with OrientExpress, or want to find example and explaination over a config or function, you can open the docs as a web server
-```
-$ npm run docs
-```
-If this command not work, please feedback the error.
-### Dynamic Docs
-You can use this commande during your coding to get help about the current variable in parametre
-```
-	help()
-```
-
+app.login()
