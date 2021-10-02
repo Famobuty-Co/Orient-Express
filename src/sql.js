@@ -29,7 +29,6 @@ class Database extends Event{
 		}
 		// sqlite_exec(database,'')
 		this.runPromise(".tables").then(stat=>{
-			console.log(stat)
 			if(!stat){
 				conxion()
 				return
@@ -39,7 +38,6 @@ class Database extends Event{
 			console.log("connection in "+c+"...")
 			stat.forEach(_name=>{
 				this.runPromise(".schema "+_name).then(_table=>{
-					console.log(_table,c)
 					_table = SQLparser(_table).tables[0]
 					this._tables.push(_table)
 					this[_table.name] = new Table(this,_table)
@@ -88,9 +86,12 @@ class Database extends Event{
 		return p
 	}
 	run(sql){
-		console.log(sql)
 		return sqlite_exec(this.name,sql,null)
 	}
+	// drop(table){
+	// 	if(this[table])
+	// 		this.run(`IF EXIST TABLE ${table} DROP TABLE ${table};`)
+	// }
 }
 class Table{
 	_array = []
@@ -105,10 +106,19 @@ class Table{
 		}
 	}
 	insert(...items){
+		/*
 		items.forEach(item=>{
 			if(item instanceof this.CLAZZ)
 			this._Insert.push(item)
 		})
+		*/
+		var items_sql = items.map(x=>{
+			var cols =Object.values(x).map(x=>`'${x}'`)
+			return `(${cols})`
+		})
+		var rows = `(${Object.keys(items[0])})`
+		var statement = this.database.run(`INSERT INTO ${this.name} ${rows} VALUES ${items_sql};`)
+		return statement
 	}
 	select(columns = "*",condition){
 		var where = ""
@@ -122,13 +132,14 @@ class Table{
 		}
 		var statement = this.database.run(`SELECT ${columns} FROM ${this.name} ${where}`)
 		statement = eval(statement)||[]
-			if(columns == "*"){
-				statement.forEach(row=>{
+		if(columns == "*"){
+			statement.forEach(row=>{
 				this._array[runInNewContext.ID] = row
 			})
 		}
 		return statement
 	}
+
 }
 var isWin = process.platform === "win32";
 const sqlite = __dirname.split('\\').slice(0,-1).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
@@ -351,9 +362,14 @@ module.exports = {
 	datatypes,
 	exec,
 	select:({database,table,column,where})=>{
-		console.log(database,table,column,where)
 		var con = connections.find(x=>x.database.name==database)
 		if(!con.database[table])throw "unkonw table "+table
-		return con.database[table].select(column,where)
+		var sta = con.database[table].select(column,where)
+		return sta
 	},
+	insert : ({database,table},values)=>{
+		var con = connections.find(x=>x.database.name==database)
+		if(!con.database[table])throw "unkonw table "+table
+		return con.database[table].insert(values)
+	}
 }

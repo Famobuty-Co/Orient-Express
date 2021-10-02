@@ -19,6 +19,7 @@ class Response{
 		if(text instanceof Component){
 			text = text.toString()
 		}
+		console.log(text)
 		this._res.end(text)
 	}
 	sendFile(file){

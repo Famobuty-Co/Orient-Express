@@ -45,6 +45,16 @@ class Component{
 		})
 		return `<${this._tag} ${attrs.join(' ')}>${this.innerHTML}</${this._tag}>`
 	}
+	[Symbol.toStringTag](){
+		return this.toString()
+	}
+	[Symbol.toPrimitive](){
+		return this.toString()
+	}
+	
+	[Symbol.toString](){
+		return this.toString()
+	}
 }
 class Label extends Component{
 

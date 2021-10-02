@@ -6,6 +6,7 @@ const SQL = require("./src/sql.js");
 const {Event} = require("./src/event.js");
 const web = require("./src/web.js");
 const {Form} = require("./src/form.js");
+const {Card} = require("./src/card");
 const bundles = require("./src/bundles.js");
 const debug = require("./src/console");
 const {noop} = require("./src/static");
@@ -82,6 +83,7 @@ const orient = {
 	},
 	include:function(file,params){
 		var content = loadFile(file)
+		if(!file)return null
 		content = orient.parse(content,params);
 		return content
 	},
@@ -100,7 +102,7 @@ const orient = {
 		return _echo_msg.join('')`))(orient.libs,options);
 		return OrientJS
 	},
-	parse : function(OrientHTML,options={}){
+	parse : function(OrientHTML="",options={}){
 		var startBlock = /<\?orient/
 		var endBlock = /\?>/
 		try{
@@ -119,8 +121,9 @@ const orient = {
 				return w.join('')
 			}).join('')
 			try{
-				var app = (options.request||options.response||orient).app
-				OrientHTML = (new Function("orient","app","options",`console.log(orient.libs);with(orient){with(orient.libs){with(app){with(options){html = \`${OrientHTML}\`}}}};return html`))(orient,app,options)
+				var app = (options.request||options.response||orient).app||{}
+				translate = (new Function("orient","app","options",`try{with(orient){with(orient.libs){with(app){with(options){html = \`${OrientHTML}\`}}}}}catch(e){html = e};return html`))
+				OrientHTML = translate(orient,app,options)
 			}catch(e){
 				debug.error(e);
 			}
@@ -182,17 +185,25 @@ class App extends Event{
 								this.method(method,`/${item}`,mth[method])
 							}
 						}
+						var forms = this.template.forms||[]
+						for (var item of forms){
+							this.method("default",`/${value.url||"admin"}`,orient.acces.create((req,res)=>{
+								ad.toPage(req).then(html=>res.send(html))
+							}))
+						}
 					break;
 					case "libs":
 						for(var lib in value){
 							var obj = {}
-							if(typeof lib == "object"){
+							if(typeof value[lib] == "object"){
 								for(var _var in value[lib]){
 									obj[_var] = orient.shortcut.parse(value[lib][_var],this.shortcut)
+									console.log(_var,obj[_var])
 								}
 							}else{
 								obj = orient.shortcut.parse(value[lib],this.shortcut)||value
 							}
+							
 							orient.use(lib,obj)
 						}
 					break;
@@ -216,6 +227,7 @@ class App extends Event{
 		http.createServer((req, res)=>{
 			var action = this.accesTable.find(req.method,req.url)
 			debug.info(req.url)
+			if(!req.url)return
 			var _res = new web.Response(res,req,this)
 			var _req = new web.Request(res,req,this)
 			try{
@@ -258,6 +270,15 @@ class App extends Event{
 	}
 	makeForm(...args){
 		return Form.create(...args)
+	}
+	makeCard(...args){
+		return Card.create(...args)
+	}
+	path(...dirsorfile){
+		var url = '/'+dirsorfile.join(`/`)
+		var path = '.'+url
+		this.method("default",url,orient.acces.file(path))
+		return path
 	}
 }
 
