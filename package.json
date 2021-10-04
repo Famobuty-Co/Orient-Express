@@ -1,7 +1,7 @@
 {
   "name": "orient-express",
   "version": "1.0.0",
-  "description": "fast way to buy web site",
+  "description": "fast way to build web site",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,8 +15,5 @@
   "bugs": {
     "url": "https://github.com/Famobuty-Co/Orient-Express/issues"
   },
-  "homepage": "https://github.com/Famobuty-Co/Orient-Express#readme",
-  "dependencies": {
-    "mysql": "^2.18.1"
-  }
+  "homepage": "https://github.com/Famobuty-Co/Orient-Express#readme"
 }
