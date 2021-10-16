@@ -44,6 +44,6 @@ If this command not work, please feedback the error.
 ### Dynamic Docs
 You can use this commande during your coding to get help about the current variable in parametre
 ```
-	help()
+orient.help()
 ```
 
