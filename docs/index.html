@@ -1,0 +1,175 @@
+${ extends("template.html")}
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Docs</title>
+		<style>
+			section:not(:target){
+				display: none;
+			}
+			code{
+				background-color: #222;
+				color:#eee;
+				white-space: pre-line;
+				display: block;
+				border-radius: 1em;
+				padding: 1em;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Orient Express</h1>
+		<p>blablabla blabla bla bla</p>
+		<summary>
+			<a href="#config">Config</a>
+			<a href="#port">Port</a>
+			<a href="#route">Route</a>
+			<a href="#method">Methodes</a>
+			<a href="#acesser">Acesseurs</a>
+			<a href="#my_first_page">Ma Premiere Page</a>
+			<a href="#database">Base de Donnée</a>
+		</summary>
+		<section id="config">
+			<h2>Configuration</h2>
+			<p>La Configuration peut etre fait avec un objet javascript
+				<code>const config = {}</code>
+				ou via un fichier JSON importer 
+				<code>const config = require("app.json");</code>
+				il faut ensuite create une application web avec cette config 
+				<code>const app = orient.express(config)</code>
+				contenu de la config
+			</p>
+			<ul>
+				<li><a href="#port">Port</a></li>
+				<li><a href="#route">Route</a></li>
+			</ul>
+		</section>
+		<section id="port">
+			<h2>Definir un port</h2>
+			<p></p>
+			<table>
+				<tr>
+					<td>Langage</td>
+					<td>JSON</td>
+					<td>JS</td>
+				</tr>
+				<tr>
+					<td>Code</td>
+					<td>{
+						"port":8080,
+					}</td>
+					<td>
+						app.listen(8080) OU 
+						app = orient.express({port:8080})
+					</td>
+				</tr>
+			</table>
+		</section>
+		<section id="route">
+			<h2>Ajouter une route</h2>
+			<p></p>
+			<table>
+				<tr>
+					<td>Langage</td>
+					<td>JSON</td>
+					<td>JS</td>
+				</tr>
+				<tr>
+					<td>Code</td>
+					<td>{
+						"/ma_route":<a href="#acesser">acesser : Function</a>,
+					}</td>
+					<td>
+						app.method(<a href="#method">methode : String</a>,"/ma_route" : String,<a href="#acesser">acesser : Function</a>)
+					</td>
+				</tr>
+			</table>
+		</section>
+		<section id="method">
+			<h2>Les Methodes</h2>
+			 <ul>
+				<li>GET</li>
+				<li>POST</li>
+			 </ul>
+		</section>
+		<section id="acesser">
+			<h2>Les Acesseurs</h2>
+			<p>Les Acesseurs sont des fonctions qui prenent la requet et une class reponse en parametre puis envoye a la reponse le contenu de la page</p>
+			<p>exemple d'accesseur par default</p>
+			<table>
+				<tr><td>orient.acess.free</td><td>acces libre a tout les pages après la route</td></tr>
+				<tr><td>orient.acess.orient(file)</td><td>lecture du fichier file (ou index.html si non definie) et execution de code orient</td></tr>
+			</table>
+		</section>
+		<section id="my_first_page">
+			<code>const orient = require("Orient-Express");
+
+				const app = orient.express({
+					"port":8080,// definition du port
+					"/":"$orient.acces.free", // acess libre au fichier
+				})
+
+				app.login()// demarer le serveur
+				
+				// Facultatif (sert à ouvrire le navigateur avec un page precise)
+				//app.browser("index.html")
+			</code>
+		</section>
+		<section id="database">
+			<small>set partie est toujours en recherche</small>
+			<h2>Create</h2>
+				<table>
+
+					<tr>
+						<td>
+							"database":{
+								"name":"madatabase",
+								"tables":{
+									"User":{
+										"username" : "VARCHAR(255)",
+										"firstname" : "VARCHAR(255)",
+										"lastname" : "VARCHAR(255)",
+										"email" : "VARCHAR(255)",
+										"phonenumber" : "VARCHAR(255)",
+										"password" : "VARCHAR(255)"
+									},
+									"Stats":{
+										"price" : "FLOAT",
+										"quality" : "INT",
+										"delay" : "INT"
+									},
+									"Artiste":{
+										"user" : "User",
+										"stats" : "Stats",
+										"category" : "[]"
+									},
+									"Article":{
+										"author":"User",
+										"content":"VARCHAR(255)",
+										"title":"VARCHAR(255)"
+									}
+								},
+							}
+						</td>
+					</tr>
+				</table>
+			<h2>Insert</h2>
+				<code>
+					orient.sql.insert({table:'Article',database:'madatabase.db',where:{}},{
+							title:"Article",
+							content:"Article Content"+new Date(Date.now()),
+						})
+				</code>
+			<h2>Select</h2>
+			<p>
+				<code>
+					${orient.sql.select({table:'Article',database:'madatabase.db',where:{}})}
+				</code>
+				Il est possible de transformer le resultat d'un requet directement en une liste de carte
+				<code>
+					${orient.sql.select({table:'Article',database:'madatabase.db',where:{}}).map(x=>makeCard(x)).join('')}
+				</code>
+			</p>
+		</section>
+	</body>
+</html>

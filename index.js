@@ -2,14 +2,16 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const Route = require("./src/route.js");
-const SQL = require("./src/sql.js");
+const SQL = require("./src/shinjuku");
 const {Event} = require("./src/event.js");
 const web = require("./src/web.js");
 const {Form} = require("./src/form.js");
 const {Card} = require("./src/card");
 const bundles = require("./src/bundles.js");
+const assets = require("./src/assets.js");
 const debug = require("./src/console");
 const {noop} = require("./src/static");
+const { exec, execSync } = require("child_process");
 
 function loadFile(file){
 	if(!path.isAbsolute(file)){
@@ -27,8 +29,13 @@ function loadFile(file){
 }
 const include = loadFile
 const orient = {
+	extends:function (file){
+		return include(file)
+	},
 	acces:{
-		free:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0])},
+		free:function (req, res) {
+			res.sendFile("./"+req.originalUrl.split('?')[0])
+		},
 		private:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0])},
 		// query:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0]+req.query.file)},
 		combine:(...files)=>{
@@ -141,13 +148,16 @@ const orient = {
 	sql:SQL,
 	shortcut:{
 		parse:function(value,shortcut){
+			if(typeof value != "string") return value
 			switch (value[0]) {
-				case (shortcut||this).script:{
+				case (shortcut.script||this.script):{
 					value = eval(value.slice(1))
 				}break;
 			}
+			console.log(value,typeof value,(shortcut||this).script)
 			return value
 		},
+		script:"$",
 	},
 }
 
@@ -159,8 +169,8 @@ class App extends Event{
 		this.port = data.port
 		for(var key in data){
 			var value = orient.shortcut.parse(data[key],this.shortcut)
-			
 			if(key.startsWith('/')){
+				console.log(value)
 				if(typeof value=="function"){
 					this.use(key,value)
 				}else if(typeof value=="object"){
@@ -174,7 +184,8 @@ class App extends Event{
 						this.errorPage = value;
 					break;
 					case "sql":
-						this.sql = SQL.createConnection(value);
+					case "database":
+						this.database = SQL.createConnection(value);
 					break;
 					case "template":
 						this.template = value
@@ -207,6 +218,11 @@ class App extends Event{
 							orient.use(lib,obj)
 						}
 					break;
+					case "assets":
+						this.assets = new assets(value)
+						this.entry_script = this.assets.entry_script
+						this.entry_link = this.assets.entry_link
+					break;
 					case "admin":
 					case "administrator":
 						var ad = new bundles.AdminPanel(value)
@@ -232,7 +248,12 @@ class App extends Event{
 			var _req = new web.Request(res,req,this)
 			try{
 				if(action==noop){
-					res.end(`<script>location.assign("${this.errorPage||this.accesTable.sort()[0]}")</script>`)
+					var errorPage = this.errorPage||this.accesTable.sort()[0]
+					if( errorPage){
+						res.end(`<script>location.assign("${errorPage}")</script>`)
+					}else{
+						res.end()
+					}
 				}else{
 					action(_req,_res)
 				}
@@ -243,14 +264,20 @@ class App extends Event{
 		}).listen(port);
 		// callback()
 		console.log("html route make")
-		if(this.sql){
-			this.sql.on("connected",()=>{
-				console.log("sql connected")
+		if(this.database){
+			this.database.on("connected",()=>{
+				console.log("database connected")
 				this.onready()
 			})
 		}else{
+			console.log("no database find")
 			this.onready()
 		}
+	}
+	browser(url){
+		url = `http://localhost:${this.port}/${url}`
+		execSync(`start ${url}`)
+		return url
 	}
 	onready(){}
 	use(path,callback){
@@ -289,5 +316,12 @@ orient.express.static = function(){
 
 }
 orient.makeForm = Form.create
+orient.help = function(data){
+	var explain = {}
+	explain.type = typeof data
+	explain.comments = data.toString().match(/\/\*.*\*\/|\/\/.*/)
+	debug.explain(explain)
+	return explain
+}
 
 module.exports = orient
