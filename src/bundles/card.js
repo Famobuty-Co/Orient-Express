@@ -26,4 +26,4 @@ class Card extends Component{
 	}
 }
 
-module.exports = {Card}
+module.exports = {Card,setup:(app)=>{app.createCard = Card.create},}

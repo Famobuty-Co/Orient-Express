@@ -1,5 +1,5 @@
 {
-  "name": "orient-express",
+  "name": "orient",
   "version": "1.0.0",
   "description": "fast way to build web site",
   "main": "index.js",
@@ -7,6 +7,8 @@
     "docs":"node docs/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "preferGlobal":true,
+  "bin":"/bin/orient.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Famobuty-Co/Orient-Express.git"

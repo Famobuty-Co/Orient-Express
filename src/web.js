@@ -1,8 +1,8 @@
-const mime = require("./mime")
+const mime = require("./mime/mime")
 const path = require("path")
 const fs = require("fs");
-const { Component } = require("./ui");
-const debug = require("./console");
+const { Component } = require("./bundles/ui");
+const debug = require("./extra/console");
 
 class Response{
 	constructor(res,req,app){
@@ -19,7 +19,6 @@ class Response{
 		if(text instanceof Component){
 			text = text.toString()
 		}
-		console.log(text)
 		this._res.end(text)
 	}
 	sendFile(file){

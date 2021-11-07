@@ -1,4 +1,4 @@
-const {noop} = require("./static")
+const {noop} = require("./extra/static")
 
 function compareString(a,b){
 	var i = 0
@@ -28,6 +28,7 @@ class AccesTable{
 		var url = path.split("#")[0].split('?')[0]
 		var callback = null
 		var table = this.table[path]
+		console.log(table , this.table,path)
 		if(table){
 			callback = table[method]||table.DEFAULT
 		}else{

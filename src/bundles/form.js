@@ -31,4 +31,4 @@ class Form extends Component{
 	}
 }
 
-module.exports = {Form}
+module.exports = {Form,setup:(app)=>{app.createForm = Form.create},}

@@ -4,7 +4,7 @@ const Database = require('./database')
 const {sqlite_init,sqlite_create} = require('./driver')
 const {Objectparser,SQLparser,Classparser} = require('./parser')
 const fs = require("fs")
-const {Event} = require("../event")
+const {Event} = require("../extra/event")
 
 class Shijuku_Connection extends Event{
 	_url = "127.0.0.1"
@@ -15,9 +15,13 @@ class Shijuku_Connection extends Event{
 	constructor(host,user,password,database){
 		super()
 		// this._url = url
+		this.name = database
 		database = `${database}.db`
 		//sqlite_create(database)
 		this.use(database)
+	}
+	select(...args){
+		this.tables.select(...args)
 	}
 	use(database){
 		if(database){
@@ -65,7 +69,7 @@ class Shijuku_Connection extends Event{
 	loadSQL(...sql){
 		sql.forEach(table=>{
 			if(fs.existsSync(table)){
-				console.log(table)
+
 				if(table.endsWith('.sql'))
 					sqlite_init(this.tables.name,table)
 			}else{
@@ -97,9 +101,11 @@ module.exports = {
 		}else{
 			sql = new Shijuku_Connection(host,user,password)
 		}
+		if(!options.entities)
+			options.entities = options.tables
 		connections.push(sql)
-		if(options.tables){
-			sql.load(options.tables)
+		if(options.entities){
+			sql.load(options.entities)
 		}
 		/*
 		if(options.init){

@@ -11,7 +11,7 @@ function SQLparser(sql){
 			case "create":{
 				if(cmd[1].toLowerCase() == "table"){
 					var t = {}
-					t.name = cmd[2]
+					t.name = cmd[2].split('(')[0]
 					var line = cmd.slice(cmd.find((a)=>{a=="("})).join(' ')
 					t.row = line.split(/\,[\r\n\t]*/).map(x=>{
 						x = x.trim().split(' ');

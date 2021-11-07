@@ -8,12 +8,14 @@ class Table{
 	_Insert = []
 	constructor(database,data = {name:"view",}){
 		this.database = database
-		this.name = data.name
+		this.name = data.name.trim().split(/[^a-z;^A-Z]/)[0]
+		console.log(data.name,this.name)
 		if(data.clazz){
 			this.CLAZZ = data.clazz
 		}else{
 			this.CLAZZ
 		}
+		this.#reload()
 	}
 	insert(...items){
 		/*
@@ -53,6 +55,20 @@ class Table{
 		}
 		return statement
 	}
+	random(number=this.length){
+		var n;
+		var ls = this.reduce((p,o)=>{
+			n = Math.random()<.5
+			if(p.length<number && n){
+				p.push(o)
+			}
+			return p
+		});
+		return ls
+	}
+	search(){
+		
+	}
 	reduce(callback,value = []){
 		return this.select("*").reduce(callback,value)
 	}
@@ -70,6 +86,50 @@ class Table{
 	}
 	map(callback){
 		return this.select("*").map(callback)
+	}
+	toString(){
+		return Object.keys(this).reduce(
+			(p,o)=>{
+				if(typeof o == "number"||parseInt(o)){
+					p.push(this[x])
+				}
+			},[])
+	}
+	[Symbol.toPrimitive](hint) {
+		if (hint === 'number') {
+		  return this.#length;
+		}else if(hint === 'string'){
+			return this.toString()
+		}
+		return null
+	}
+	isFetch(){
+		return this.database.run(`.schema ${this.name}`)
+	}
+	#length = 0
+	get length (){
+		if(!this.isFetch())return 0
+		var statement = this.database.run(`SELECT COUNT(*) FROM ${this.name}`)
+		statement = eval(statement)||[]
+		statement = statement[0]["COUNT(*)"]
+		console.log(statement)
+		return statement||0
+	}
+	#reload(){
+		var length = this.length
+		if(length != this.#length){
+			var statement = this.database.run(`SELECT id FROM ${this.name} WHERE id BETWEEN ${this.#length} AND ${length}`)
+			statement = eval(statement)||[]
+			/*
+			statement.forEach(x=>{
+				Object.defineProperty(this,x.id,{
+					get:()=>{return this.selectLine(x.id)},
+					set:()=>{},
+				})
+			})
+			*/
+			this.#length = length
+		}
 	}
 }
 

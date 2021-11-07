@@ -1,6 +1,6 @@
 const Table = require('./table')
 const {sqlite_exec,sqlite_init,sqlite_create} = require('./driver')
-const {Event} = require("../event")
+const {Event} = require("../extra/event")
 const {Objectparser,SQLparser,Classparser} = require('./parser')
 
 class Database extends Event{
