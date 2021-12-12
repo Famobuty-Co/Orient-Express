@@ -1,3 +1,4 @@
+const { Annoted } = require('../extra/annoted')
 const datatypes = require('./datatype')
 
 function SQLparser(sql){
@@ -45,6 +46,8 @@ function Objectparser(tables){
 	return _tables
 }
 function Classparser(clazz){
+	/*
+	console.log("Classparser")
 	var table = {}
 	table.clazz = clazz
 	table.name = clazz.name||clazz.constructor.name
@@ -71,6 +74,42 @@ function Classparser(clazz){
 			type:extend,
 		}
 		dclar.push(extend)
+	}
+	table.row = dclar.reduce((p,o)=>{if(o.name){p.push(o)};return p},[])
+	return table*/
+	var table = {
+		name:clazz.name,
+		clazz:clazz,
+		row:[],
+	}
+	var dclar = []
+	var extend = clazz.toString().split('{')[0].split('extends').slice(1).join('extends')
+	if(extend){
+		extend = {
+			name:extend.toLowerCase(),
+			value:`new ${extend}()`,
+			type:extend,
+		}
+		dclar.push(extend)
+	}
+	Annoted(clazz)
+	var annotations = clazz.getAnnotations()
+	if(annotations.length<1){
+		throw "missing annotation"
+	}else{
+		annotations.forEach(annotation=>{
+			if(annotation.getAnnotationName() == "field"){
+				var [name,type,value] = annotation.getAnnotationValues()
+				switch(type){
+					case "string" : type = "varchar"; break;
+					case "number" : type = "float"; break;
+					default:type = type.toLowerCase();
+				}
+				dclar.push({
+					value,name,type
+				})
+			}
+		})
 	}
 	table.row = dclar.reduce((p,o)=>{if(o.name){p.push(o)};return p},[])
 	return table

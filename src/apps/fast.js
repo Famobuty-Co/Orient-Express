@@ -5,12 +5,17 @@ const Database = require("../shinjuku/database");
 
 class FastPage extends Document{
 	#app = null
-	constructor(title,app){
+	constructor(root,app){
 		super()
+		this.path = root
 		this.#app = app
 	}
 	append(...args){
-		this.body.append(...args)
+		if(this.body){
+			this.body.append(...args)
+		}else{
+			super.append(...args)
+		}
 		return this
 	}
 	static loadEvent = "pageloading"
@@ -22,6 +27,9 @@ class FastPage extends Document{
 		}
 		return page
 	}
+	getRoute(){
+		return this.path
+	}
 }
 class FastEntity{
 	addField(name,type){
@@ -31,13 +39,23 @@ class FastEntity{
 
 }
 class FastApp extends App{
+	static page = FastPage
 	constructor(name){
 		super()
 		this.name = name
 	}
-	createPage(root){
+	paths = {}
+	path(accesName){
+		var page = this.paths[accesName]
+		if(!page)return "null"
+		return page
+		// return page.getRoute?page.getRoute():"null"
+	}
+	createPage(root,name){
 		var page = new FastPage(root,this)
+		this.paths[name||root.slice(1)] = page
 		this.addRoute(root,function fastPage(req, res) {var _page  = page.createSession(req);res.send(_page)})
+		this.onpagecreate?.call(page)
 		return page
 	}
 	#hasDatabase = false

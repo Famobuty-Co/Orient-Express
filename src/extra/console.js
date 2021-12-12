@@ -63,6 +63,7 @@ module.exports = {
 	explain,
 	help,
 	error:trace(BgRed,FgWhite,Bright),
+	alert:text("ERROR : ",BgRed,FgWhite,Bright),
 	warn:text("/!\\",BgYellow,FgBlack,Bright,Underscore),
 	succes:text("",BgGreen,FgWhite,Bright),
 	info:text("(i)",BgBlue,FgWhite,Bright,Underscore),

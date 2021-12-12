@@ -17,6 +17,9 @@ class AccesTable{
 			this[method] = callback
 		}
 	}
+	clear(){
+		this.table = {}
+	}
 	table = {}
 	append(path,optn = {}){
 		if(!this.table[path])
@@ -28,7 +31,6 @@ class AccesTable{
 		var url = path.split("#")[0].split('?')[0]
 		var callback = null
 		var table = this.table[path]
-		console.log(table , this.table,path)
 		if(table){
 			callback = table[method]||table.DEFAULT
 		}else{

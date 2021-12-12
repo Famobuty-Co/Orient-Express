@@ -12,7 +12,7 @@ class Database extends Event{
 		const conxion = ()=>{
 			console.log("connected to the base")
 			this.isConnected = true
-			this.onconnected()
+			this.onconnected?.call()
 		}
 		// sqlite_exec(database,'')
 		this.runPromise(".tables").then(stat=>{
@@ -26,8 +26,10 @@ class Database extends Event{
 			stat.forEach(_name=>{
 				this.runPromise(".schema "+_name).then(_table=>{
 					_table = SQLparser(_table).tables[0]
-					this._tables.push(_table)
-					this[_table.name] = new Table(this,_table)
+					if(!this[_table.name]){
+						this._tables.push(_table)
+						this[_table.name] = new Table(this,_table)
+					}
 					c--
 					console.log("connection in "+c+"...")
 					if(c<=0){
@@ -37,9 +39,9 @@ class Database extends Event{
 			})
 		})
 	}
-	onconnected(){}
 	Register(_table){
 		this._tables.push(_table)
+		//utils
 		this[_table.name] = new Table(this,_table)
 		var exist = this.run(`.schema ${_table.name}`)
 		if(exist){
@@ -53,7 +55,11 @@ class Database extends Event{
 		}
 		if(!exist || exist.length==_table.row.length){
 			var values=_table.row.map(x=>`${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`)
-			this.run(`create table ${_table.name}(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,${values});`)
+			if(values.length){
+				this.run(`create table ${_table.name}(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,${values});`)
+			}else{
+				throw `${_table.name} has no column`
+			}
 		}else if(exist.length!=0){
 			var values=exist.map(x=>{
 				x = `${x.name} ${x.type} ${x.value==null?"":"NOT NULL"}`

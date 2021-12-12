@@ -12,14 +12,53 @@ class Response{
 	}
 	format(formats){
 		var _mime = mime.lookup(this._req.url);
-		// this._res.setHeader("Content-Type", _mime);
 		(formats[_mime]||formats.default)()
+	}
+	setMime(mime){
+		this._res.setHeader("Content-Type", mime);
+	}
+	setMimeFile(file){
+		var _mime = mime.lookup(file,"text/plain");
+		this.setMime(_mime)
 	}
 	send(text){
 		if(text instanceof Component){
 			text = text.toString()
 		}
-		this._res.end(text)
+		if(typeof text != "string"){
+			console.log(text)
+		}
+		this._res.end(text.toString())
+	}
+	sendDirFile(dirfile,dirname){
+		var raw = this._req.rawHeaders.map(x=>x.toLowerCase())
+		console.log(raw)
+		var sfd = raw.indexOf('sec-fetch-dest')
+		sfd = raw[sfd+1]
+		var sfm = raw.indexOf('sec-fetch-mode')
+		sfm = raw[sfm+1]
+		var sfs = raw.indexOf('sec-fetch-site')
+		sfs = raw[sfs+1]
+
+		var str = ""
+		console.log(sfd,sfm,sfs)
+		if(sfd == "script" && sfm == "cors" && sfs == "same-origin"){
+			str = dirfile.map(x=>{
+				return `import * as ${x.split('.')[0]} from "./${dirname}/${x}"`
+			}).join(';')+";\n"
+			str += "export {"+dirfile.map(x=>{
+				return `${x.split('.')[0]}`
+			}).join(',')+"}"
+			this.setMime("application/javascript")
+		}
+		if(sfd == "document" && sfm == "navigate" && sfs == "none"){
+			str = "<html><body><ul>"+dirfile.map(x=>{
+				return `<li><a href="/${x}">${x}</a><li>`
+			}).join('')+"</ul></body></html>"
+			this.setMime("text/html")
+		}
+		console.log(str)
+		this.send(str)
 	}
 	sendFile(file){
 		if(!path.isAbsolute(file)){
@@ -32,6 +71,9 @@ class Response{
 		}else{
 			this._res.end();
 		}
+	}
+	close(){
+		this._res.end();
 	}
 }
 function parserQuery(search){
@@ -79,11 +121,13 @@ class Request{
 		return this._req.method.toUpperCase()
 	}
 	get header(){
-		console.log(this._req)
-		return this._req.getRawHeaderNames().map(x=>this._req.getHeader(x))||[]
+		return this._req.rawHeaders||this._req.getRawHeaderNames().map(x=>this._req.getHeader(x))||[]
 	}
 	get body(){
 		return this.data
+	}
+	get socket(){
+		return this._req.socket
 	}
 	async getBody(){
 		return new Promise((resolve)=>{

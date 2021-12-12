@@ -14,6 +14,15 @@ class StyleSheet{
 		})
 		return css.join(';')
 	}
+	toComponent(selector){
+		var style = create("style")
+		style.write(`
+		${selector||"body"}{
+			${this.toString()}
+		}
+		`)
+		return style
+	}
 	[Symbol.toStringTag](){
 		return this.toString()
 	}
@@ -40,11 +49,29 @@ class ClassList extends Set{
 		return this.toString()
 	}
 }
-
-class Component{
+const ComponentEvent = {
+	onappending:Symbol("onappending"),
+}
+class Component {
 	static ComponentNumber = 0
 	_attributes = new Map()
 	_content = new  Set()
+
+	#document = null
+	get document(){
+		return this.#document||this
+	}
+	set document(value){
+		this.#document = value
+		if(this.hasEventListener("documentupdated")){
+			this.dispatchEvent(createEvent("documentupdated",{target:this,document:this.document}))
+			this.removeEventListener("documentupdated")
+		}
+	}
+
+	get childCount (){
+		return this._content.size
+	}
 	get innerHTML(){return [...this._content].map(x=>x?x.toString():"").join('')}
 	set innerHTML(html){this._content = new Set();if(html)this._content.add(html)}
 
@@ -80,31 +107,60 @@ class Component{
 	get selector(){
 		return `${this.tagName}?${[...this.classList].map(x=>"\."+x+"?").join("")}`
 	}
+	static parse = /^[a-z]+|\.[a-z]+|\[[a-z]+(\=)?\w+\]/
+	getElementById(id){
+		return [...this._content].find(x=>x.id == id)
+	}
+	getElementByName(name){
+		return [...this._content].find(x=>x.getAttribute('name') == name)
+	}
+	getElementsByClassName(className){
+		return [...this._content].filter(x=>x.classList.has(className))
+	}
+	getElementsByTagName(tag){
+		return [...this._content].filter(x=>{
+			// console.log(x._tag , tag)
+			return x._tag == tag
+		})
+	}
 	isSelector(selector){
-		var rg = new RegExp(this.selector)
-		return rg.test(selector.toLowerCase())
+		// var rg = new RegExp(this.selector)
+		selector = selector.toLowerCase()
+		var parsed = selector.match(Component.parse)
+		// parsed.every(x=>{
+		// 	if(x == this._tag){
+		// 		return true
+		// 	}else{
+		// 		var f =x[0]
+		// 		switch(f){
+		// 			case ".":
+		// 				return this.classList.has(x.slice(1))
+		// 		}
+		// 	}
+		// })
+
+		return selector.startsWith(this._tag)
+		
+		//rg.test()
 	}
 	querySelectorAll(selector){
-		return [...this._content].filter(x=>{
+		var elements = [...this._content].reduce((p,x)=>{
 			if(x instanceof Component){
 				var s = x.isSelector(selector)
 				if(!s){
 					s = x.querySelectorAll(selector)
+					p.push(s)
+				}else{
+					p.push(x)
 				}
-				return s
 			}
-		}).flat()
+			return p
+		},[]).flat()
+		return elements
 	}
 	querySelector(selector){
-		return [...this._content].find(x=>{
-			if(x instanceof Component){
-				var s = x.isSelector(selector)
-				if(!s){
-					s = x.querySelector(selector)
-				}
-				return s
-			}
-		})
+		var element = this.querySelectorAll(selector)[0]
+		return element
 	}
 	clone(){
 		var obj = new this.constructor(this.tagName,this.innerHTML)
@@ -146,17 +202,32 @@ class Component{
 		// if(! child instanceof Component)
 			// throw "Uncaught TypeError: Component.appendChild: Argument 1 does not implement interface Node."
 		this._content.add(child)
+		var appendEvent = "appending"
+		child.parent = this
+		if(child.hasEventListener(appendEvent)){
+			child.dispatchEvent(createEvent(appendEvent,{target:child}))
+			child.removeEventListener(appendEvent)
+		}
+		return this
+	}
+	remove(child){
+		this._content.delete(child)
 		return this
 	}
 	addEventListener(event,callback){
 		if(!callback && typeof callback!="function")return
 		event = 'on'+event
-		callback = `(${callback.toString()})(event)`
-		if(this.hasAttribute(event)){
-			callback = this.getAttribute(event)+";"+callback
+		if( typeof callback == "function" ){
+			// callback = 
 		}
+		// if(this.hasAttribute(event)){
+		// 	callback = callback
+		// }
 		this.setAttribute(event,callback)
 		return this
+	}
+	#createStringCallBack(callback){
+		return `(${callback.toString()})(event)`
 	}
 	removeEventListener(event){
 		event = 'on'+event
@@ -169,7 +240,9 @@ class Component{
 	dispatchEvent(event){
 		var name = 'on'+(event.type||event.name)
 		var callback = this.getAttribute(name)
-		callback = new Function("event","app",callback)
+		if(typeof callback != "function"){
+			callback = new Function("event","app",callback)
+		}
 		callback(event,event.app)
 		return this
 	}
@@ -182,10 +255,14 @@ class Component{
 		var attrs = []
 		this._attributes.forEach((v,k)=>{
 			var t = v.toString()
+			if(k.startsWith('on')){
+				t = this.#createStringCallBack(t)
+			}
 			if(t && t.length!=0){
 				attrs.push(`${k}="${t}"`)
 			}
 		})
+		
 		var innerHTML = [...this._content].map(x=>x?x.toString():"").join('')
 		return `<${this._tag} ${attrs.join(' ')}>${innerHTML}</${this._tag}>`
 	}
@@ -241,19 +318,27 @@ function createEvent(eventName,content = {}){
 }
 
 class Document extends Component{
+	document = null
+	styles = create("style").write()
+	scripts = create("script").write()
 	constructor(title,app){
 		super("html")
 		this.head = create("head")
 		this.body = create("body")
 		this.title = create("title").write(title)
-		this.style = create("style").write()
-		this.script = create("script").write()
+		
+
+		var charset = create('meta')
+		charset.setAttribute('charset',"UTF-8")
 
 		super.append(this.head)
 		super.append(this.body)
 		this.head.append(this.title)
-		this.head.append(this.style)
-		this.head.append(this.script)
+		this.head.append(charset)
+		this.head.append(this.styles)
+		this.head.append(this.scripts)
+		this.body.style.margin = "auto"
+
 	}
 	write(...args){
 		this.body.write(...args)
@@ -265,17 +350,40 @@ class Document extends Component{
 	}
 	clone(){
 		var obj = super.clone()
-		obj.body = obj.querySelector("body")
-		obj.head = obj.querySelector("head")
-		obj.title = obj.querySelector("title")
-		obj.script =obj.querySelector("script")
-		obj.style = obj.querySelector("style")
+
+		obj.body = obj.getElementsByTagName("body")[0]
+
+		obj.head = obj.getElementsByTagName("head")[0]
+		obj.title = obj.head.getElementsByTagName("title")[0]
+		obj.scripts =obj.head.getElementsByTagName("script")[0]
+		obj.styles = obj.head.getElementsByTagName("style")[0]
 		return obj
 	}
 }
-
+const Unit = {}
+Unit.convert=(value="",element = {},woh)=>{
+		var number = value.split(/[^0-9]/).join('')||0
+		var type = value.split(/[0-9]/).join('')
+		var unit;
+		var style = element.style
+		switch(type){
+			case "em":unit = style.fontSize;break
+			case "%":unit = woh?style.height:style.width;break
+			default:unit = 1
+		}
+		return number*unit
+	}
+Unit.max =(...args)=>{
+		var _args = args.map(x=>Unit.convert(x))
+		return args[_args.indexOf(Math.max(..._args))]
+	}
+Unit.min = (...args)=>{
+		var _args = args.map(x=>Unit.convert(x))
+		return args[_args.indexOf(Math.min(..._args))]
+	}
 module.exports = {
 	create,
 	createEvent,
-	Component,Button,Label,Input,Document
+	Component,Button,Label,Input,Document,
+	ComponentEvent,Unit
 }

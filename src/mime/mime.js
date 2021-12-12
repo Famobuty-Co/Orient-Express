@@ -1,5 +1,6 @@
 
 const mime = {
+	default_type:"text/plain",
 	types:{},
 	lookup : function(path, fallback) {
 		var ext = path.replace(/^.*[\.\/\\]/, '').toLowerCase();

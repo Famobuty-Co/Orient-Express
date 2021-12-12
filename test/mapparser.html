@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<title>Page Title</title>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+	<script>
+		const module = {
+			exports :{},
+		}
+		function require(libs){
+			globalImport = module.exports
+			Object.keys(module.exports).forEach((key)=>{
+				var value = module.exports[key]
+				globalThis[key] = value
+			})
+			document.write(`<script src='../src/orient/${libs}.js'><${"/"}script>`)
+			return globalImport
+		}
+	</script>
+	<script src='../src/orient/automate.js'></script>
+</head>
+<body>
+	<script>
+		const HTMLParse = new module.exports.AutomateBuilder
+		
+var typevaluesStart = []
+var typevaluesEnd = []
+var startinstruction = []
+
+	var endinstruction = HTMLParse.addToken(/\n/,"endintrus")
+	var separator = HTMLParse.addToken(" ","separate",startinstruction)
+	
+	/* int */
+	var integer = HTMLParse.addToken(/[0-9]/,"integer",[separator,-1],[endinstruction,separator])
+	typevaluesStart.push(integer)
+	typevaluesEnd.push(integer)
+
+	/* string */
+	var stringStart = HTMLParse.addToken(/[a-z]/,"stringstart",[separator])
+	var string = HTMLParse.addToken(/[a-z;0-9]/,"string",[stringStart,-1],[endinstruction,separator])
+	typevaluesStart.push(stringStart)
+	typevaluesEnd.push(string)
+
+		/* block x y*/
+	var block = HTMLParse.addToken("block ","startblock",[endinstruction,0],typevaluesStart)
+
+		const tests = [
+			"block moose 0 0",
+			"block moose 0 0\nblock moose 1 1",
+			"spawn 1 0",
+			"guard zombie 1 0 ",
+			"pattern right top right top",
+		]
+		function test(){
+			tests.forEach(test=>{
+				console.log(HTMLParse.recognize(test))
+			})
+		}
+		test()
+	</script>
+</body>
+</html>

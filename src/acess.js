@@ -1,4 +1,6 @@
 const {loadFile} = require('./extra/static')
+const orient = require('./orient/index')
+
 acces = {
 	free:function (req, res) {
 		
@@ -8,10 +10,17 @@ acces = {
 
 		var dir = "./"+req.originalUrl.split('/').slice(0,-1).join('/')+"/";
 		var content = loadFile(dir+file);
+		if(content){
+			if(content instanceof Array){
+				res.sendDirFile(content,file)
+			}else{
+				res.setMimeFile(dir+file)
+				res.send(content)
+			}
+		}
+		res.close()
 
-		res.send(content)
-
-		//res.sendFile("./"+req.originalUrl.split('?')[0])
+		// res.sendFile("./"+req.originalUrl.split('?')[0])
 	},
 	private:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0])},
 	// query:function (req, res) {res.sendFile("./"+req.originalUrl.split('?')[0]+req.query.file)},
@@ -38,11 +47,12 @@ acces = {
 		return function (req, res) {res.sendFile(file)}
 	},
 	root:function(){
-		return this.orient("./index.html")
+		return this.orientFile("./index.html")
 	},
-	orient:(file)=>{
+	orientFile:(file)=>{
 		return {
 			default:function (req, res) {
+				console.log(file)
 				if(!file){
 					file = req.originalUrl.split('/').slice(-1).join('/');
 					if(file.search('.')==-1){file+="index.html"}
@@ -55,6 +65,25 @@ acces = {
 			static:true,
 		}
 	},
+	orient:(req, res)=>{
+				
+				var file = req.originalUrl.split('/').slice(-1).join('/');
+
+				if(file.search('.')==-1){file+="index.html"}
+
+				var dir = "./"+req.originalUrl.split('/').slice(0,-1).join('/')+"/";
+				var content = loadFile(dir+file);
+				if(content){
+					if(content instanceof Array){
+						res.sendDirFile(content,file)
+					}else{
+						content = orient.parse(content,{request:req,response:res});
+						res.setMimeFile(dir+file)
+						res.send(content)
+					}
+				}
+				res.close()
+	},
 	queryFile:(file)=>{
 		return (req,res)=>{
 					if(!req.file){
@@ -64,7 +93,7 @@ acces = {
 					content = orient.parse(content,{request:req,response:res});
 					res.send(content)
 				}
-	}
+	},
 }
 
 module.exports = acces

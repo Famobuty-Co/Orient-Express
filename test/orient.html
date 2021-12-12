@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<title>Page Title</title>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+	<script>
+		const module = {
+			exports :{},
+		}
+		function require(libs){
+			globalImport = module.exports
+			Object.keys(module.exports).forEach((key)=>{
+				var value = module.exports[key]
+				globalThis[key] = value
+			})
+			document.write(`<script src='../src/orient/${libs}.js'><${"/"}script>`)
+			return globalImport
+		}
+	</script>
+	<script src='../src/orient/automate.js'></script>
+</head>
+<body>
+	<script>
+const HTMLParse = new module.exports.AutomateBuilder
+
+var htmlcode = []
+
+var twigcodestart = HTMLParse.addToken("{%","startcode",[HTMLParse.ALL])
+var twigcodeend = HTMLParse.addToken("%}","endcode",[twigcodestart],[0])
+var twigvarstart = HTMLParse.addToken("{{","startvar",[HTMLParse.ALL])
+var twigvarend = HTMLParse.addToken("}}","endvar",[twigvarstart],[0])
+		
+var HTMLdecalre = HTMLParse.addToken("<!DOCTYPE html>","HTMLdecalre",[0])
+var htmlstart = [0,twigvarend,twigcodeend,HTMLdecalre,-1]
+htmlcode.push(HTMLdecalre)
+
+var HTMLcommentstart = HTMLParse.addToken("<!","HTMLcommentstart",htmlstart)
+var HTMLcomment = HTMLParse.addToken(/[a-z; ]/i,"HTMLcomment",[HTMLcommentstart,-1])
+var HTMLcommentend = HTMLParse.addToken(">","HTMLcommentend",[HTMLcomment])
+
+htmlstart.push(HTMLcommentend)
+htmlcode.push(HTMLcommentstart)
+htmlcode.push(HTMLcomment)
+htmlcode.push(HTMLcommentend)
+
+var HTMLtagstart = HTMLParse.addToken(/<[a-z]/i,"HTMLtagstart",htmlstart)
+var HTMLtag = HTMLParse.addToken(/[^>]/i,"HTMLtag",[HTMLtagstart,-1])
+var HTMLtagend = HTMLParse.addToken(">","HTMLtagend",[HTMLtag,HTMLtagstart])
+
+htmlstart.push(HTMLtagend)
+htmlcode.push(HTMLtagstart)
+htmlcode.push(HTMLtag)
+htmlcode.push(HTMLtagend)
+
+var HTMLEndtagstart = HTMLParse.addToken(/<\/[a-z]/i,"HTMLEndtagstart",htmlstart)
+var HTMLEndtag = HTMLParse.addToken(/[a-z;0-9]/i,"HTMLEndtag",[HTMLEndtagstart,-1])
+var HTMLEndtagend = HTMLParse.addToken(">","HTMLEndtagend",[HTMLEndtagstart,HTMLEndtag])
+
+htmlstart.push(HTMLEndtagend)
+htmlcode.push(HTMLEndtagstart)
+htmlcode.push(HTMLEndtag)
+htmlcode.push(HTMLEndtagend)
+
+// var HTMLcode = HTMLParse.addToken(/<[a-z]*(-[a-z]*)?([ ;\n;\r;\t]*([a-z]*(=("?[^ ]*"?))?)?)*>/,"HTMLcode",htmlstart)
+var HTMLcontent = HTMLParse.addToken(/[\w\s\d]/i,"htmlcontent",[
+	twigvarend,twigcodeend,HTMLcommentend,HTMLtagend,-1,HTMLEndtagend
+],[HTMLEndtagstart])
+// twigstrat.push(HTMLcontent,HTMLcode)
+htmlcode.push(HTMLcontent)
+
+var indentspace = HTMLParse.addToken(/[ ;\n;\t;\r;^\s]/,"indent",[twigcodestart,twigvarstart],[twigvarend,twigcodeend])
+
+var arraycodestart = [twigcodestart,twigvarstart,indentspace]
+var arraycodeend = [indentspace,twigvarend,twigcodeend]
+
+var twigvarnamestart = HTMLParse.addToken(/[a-z]/i,"varnamestart",arraycodestart)
+var twigvarnamecontent = HTMLParse.addToken(/[a-z;0-9;\.]/i,"varnamecontent",[twigvarnamestart,-1],arraycodeend)
+
+var twigvalueStart = []
+var twigvalueEnd = []
+
+var twigNumber = HTMLParse.addToken(/[0-9;\.]/i,"Number",[-1])
+twigvalueStart.push(twigNumber)
+twigvalueEnd.push(twigNumber)
+
+var twigStringstart = HTMLParse.addToken(/[";']/,"Stringstart",arraycodestart)
+var twigStringcontent = HTMLParse.addToken(/[^"]/i,"Stringcontent",[twigStringstart,-1])
+var twigStringend = HTMLParse.addToken(/[";']/,"Stringend",[twigStringcontent],[indentspace])
+
+twigvalueStart.push(twigStringstart)
+twigvalueEnd.push(twigStringend)
+
+var twigparametersstart = HTMLParse.addToken("(","parametersstart",[twigvarnamecontent,1],twigvalueStart)
+var twigparametersend = HTMLParse.addToken(")","parametersend",[twigvarnamecontent,-1,twigparametersstart],arraycodeend)
+
+arraycodeend.push(twigparametersend)
+
+var twigobjectsend = HTMLParse.addToken("}","objectsend",twigvalueEnd,arraycodeend)
+var twigobjectsstart = HTMLParse.addToken("{","objectsstart",[twigvarnamecontent,twigparametersstart],[twigobjectsend])
+
+twigvalueStart.push(twigobjectsstart)
+twigvalueEnd.push(twigobjectsend)
+
+var twigobjectskey = HTMLParse.addToken(/[a-z;0-9]/i,"objectskey",[twigobjectsstart,-1])
+var twigobjectsassign = HTMLParse.addToken(":","objectsassing",[twigobjectskey],twigvalueStart)
+var twigobjectsseparator = HTMLParse.addToken(",","objectsseparator",twigvalueEnd,[twigobjectskey,twigobjectsend])
+
+var twigBlockStart = HTMLParse.addToken("block","twigBlockStart",[twigcodestart,indentspace],[twigvarnamestart])
+var twigBlockEnd = HTMLParse.addToken("endblock","twigBlockEnd",[twigcodestart,indentspace],[twigcodeend])
+
+
+var twigIFStart = HTMLParse.addToken("if","twigIFStart",[twigcodestart,indentspace],[twigvarnamestart])
+var twigELSE = HTMLParse.addToken("else","twigELSE",[twigcodestart,indentspace],[twigcodeend])
+var twigIFEnd = HTMLParse.addToken("endif","twigIFEnd",[twigcodestart,indentspace],[twigcodeend])
+
+var twigTemplate = HTMLParse.addToken("template","twigTemplate",[twigcodestart,indentspace],[twigcodeend])
+
+		const tests = [
+			"some",
+			"{{ t",
+			"{{ template }}",
+			"{% setblock %}Yo{% endblock %}",
+			"<h1>Article</h1><p>{{content}}</p>",
+			// '<!DOCTYPE html><html lang="en"><head><title>{{titre}}</title><meta charset="UTF-8"><meta name="description" content="Your description goes here"><meta name="robots" content="index, follow"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./css/style.css"></head><body>{{Famobuty.Project}}<header>{{makeSlides(Famobuty.Project.random())}}</header>{{include(components.nav)}}<main><section id="articles">'
+				// +'{{getUser({id:0,})}}'
+				// +'<a href="articles">Nos Articles</a></section></main>{{include(components.footer)}}</body></html>',
+		]
+		regroup = [
+					[twigStringstart,twigStringcontent,twigStringend],
+					[HTMLcommentstart,HTMLcomment,HTMLcommentend],
+					[HTMLEndtagstart,HTMLEndtag,HTMLEndtagend],
+					[HTMLtagstart,HTMLtag,HTMLtagend],
+					[twigvarnamestart,twigvarnamecontent],
+					[twigobjectskey],
+					[twigobjectsstart,twigobjectsend],
+					[HTMLcontent],
+				]
+		function test(){
+			tests.forEach(test=>{
+				console.log(HTMLParse.regroup(test,regroup).clean())
+			})
+		}
+		/*
+		function execute(code,option = {}){
+			var args = Object.keys(option)
+			var groups = HTMLParse.regroup(code,regroup)
+			var temp = []
+			var typ = false	
+			var code = groups.reduce((p,o)=>{
+				if(htmlcode.includes(o.stat)){
+					p.push(o.input)
+				}else{
+					if(o.stat == twigvarend){
+						typ = false
+						var c = `return `+temp.join('')
+						c = (new Function(...args,c))(Object.values(option))
+						p.push(c)
+					}else if(o.stat == twigcodeend){
+						temp = []
+						console.log(temp)
+					}else if(typ){
+						temp.push(o.input)
+					}else if(o.stat == twigvarstart){
+						typ = true
+						temp = []
+					}else if(o.stat == twigcodestart){
+						temp = []
+					}else{
+						console.log(o)
+						switch(o.stat){
+							case twigBlockStart:
+								
+							break;
+						}
+					}
+				}
+				return p
+			},[])
+			code = code.join('')
+			console.log(code)
+		}
+		*/
+		var env = {}
+		function execute(code,option,_env){
+			var blocks = new Map()
+			var templates = new Set()
+
+			
+			var html = []
+			var temps = new Map()
+			var curentfxName = null
+			var curentfxArgs = new Set()
+			var localcontent = html
+
+			execute.env = _env||{
+				blocks,
+				templates,
+				vars:option,
+				ifs:new Array,
+				localcontent
+			}
+
+			execute.env.template = null
+			execute.env.localcontent = []
+
+			HTMLParse.execute(code,regroup,{
+				"twigTemplate":()=>{curentfxName = "template"},
+				"twigBlockStart":()=>{curentfxName = "createBlock"},
+				"twigBlockEnd":()=>{curentfxName = "appendBlock"},
+				"twigIFStart":()=>{curentfxName = "if"},
+				"twigELSE":()=>{curentfxName = "else"},
+				"twigIFEnd":()=>{curentfxName = "endif"},
+				"endcode":()=>{
+					if(curentfxName){
+						env[curentfxName](...curentfxArgs)
+						curentfxArgs.clear()
+						curentfxName = null
+					}
+				},
+				"startcode":()=>{},
+				"startvar":()=>{
+				},
+				"varnamestart":(text)=>{
+					if(execute.env.vars && execute.env.vars[text] != undefined){
+						_var = execute.env.vars[text]
+						text = _var
+					}
+					if(curentfxName){
+						curentfxArgs.add(text)
+					}else{
+						execute.env.localcontent.push(text)
+					}
+				},
+				"endvar":()=>{
+					// if(execute.env.localcontent != html){
+					// 	html.push(execute.env.localcontent.join(''))
+					// 	localcontent = html
+					// }
+				},
+				"indent":()=>{},
+				default:(text,token)=>{
+					if(twigvalueStart.includes(token.stat)){
+						curentfxArgs.add(text)
+					}else{
+						execute.env.localcontent.push(text)
+					}
+				},
+			})
+			if(execute.env.template){
+				return execute(execute.env.template.content,execute.env.vars,execute.env)
+			}else{
+				return execute.env.localcontent.join('')
+			}
+		}
+		env.if = function(condition){
+			console.log(condition)
+			execute.env.ifs.push({
+				condition,
+				true:[],
+				false:[],
+				parent :execute.env.localcontent,
+			})
+			execute.env.localcontent = execute.env.ifs[execute.env.ifs.length-1].true
+		}
+		env.else = function(condition){
+			execute.env.localcontent = execute.env.ifs[execute.env.ifs.length-1].false
+		}
+		env.endif = function(condition){
+			var _if = execute.env.ifs.pop()
+			console.log(_if)
+			var value = _if.false
+			var condition = false
+			try{
+				condition = eval(_if.condition)
+			}catch{
+				condition = _if.condition
+			}
+			console.log(condition)
+			if(condition){
+				value = _if.true
+			}
+			execute.env.localcontent = _if.parent
+			execute.env.localcontent.push(value.join(''))
+		}
+		env.template = function(file){
+			execute.env.template = {
+				content : "<nav>{% block nav %}NAV{% endblock %}</nav>{% block body %}<h1>Article</h1><p>{{content}}</p>{% endblock %}",
+			}
+		}
+		env.createBlock = function(name){
+			execute.env.currentBlock = {
+				array:[],name,parent:execute.env.localcontent,
+			}
+			execute.env.localcontent = execute.env.currentBlock.array
+		}
+		env.appendBlock = function(){
+
+			var block = execute.env.currentBlock
+			if(execute.env.blocks.get(execute.env.currentBlock.name)){
+				block = execute.env.blocks.get(execute.env.currentBlock.name)
+			}else{
+				execute.env.blocks.set(execute.env.currentBlock.name,execute.env.currentBlock)
+			}
+			execute.env.currentBlock.parent.push(block.array.join(''))
+			execute.env.localcontent = execute.env.currentBlock.parent
+			execute.env.currentBlock = null
+		}
+		// test()
+		// execute("<h1>Article</h1><p>{{content}}</p>",{content:"lol",})
+		// execute("{% setblock %} <h1>Article</h1><p></p> {% endblock %}")
+		// exec = execute("{% if true %}VRAI{% else %}FAUX{% endif %}")
+		// exec = execute("{% if value %} {%if cond %}VRAI 2 {% else %}FAUX 2{% endif %}{% else %}FAUX{% endif %}",{value:true,cond:false,})
+		// execute("{% block body %} <h1>Article</h1><p>{{content}}</p> {% endblock %} {% block body %}{% endblock %}",{content:"lol",})
+		// execute("{% block body %} <h1>Article</h1><p>{{content}}</p> {% endblock %}",{content:"lol",})
+		// var exec = execute('{% block nav %}NAV{% endblock %}{% block body %}<h1>Article</h1><p>{{content}}</p>{% endblock %}',{content:"lol",})
+		// var exec = execute('{% template "./*" %}{% block body %}<body>BODY</body>{% endblock %}',{content:"lol",})
+		var exec = execute('{% template "./*" %}{% block body %}<body>{% if exist content %}{{content}}{% else %} there is not content{% endif %}</body>{% endblock %}',{})
+		console.log(exec)
+	</script>
+</body>
+</html>

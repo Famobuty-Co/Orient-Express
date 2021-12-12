@@ -5,6 +5,7 @@ const {sqlite_init,sqlite_create} = require('./driver')
 const {Objectparser,SQLparser,Classparser} = require('./parser')
 const fs = require("fs")
 const {Event} = require("../extra/event")
+const { join } = require('path')
 
 class Shijuku_Connection extends Event{
 	_url = "127.0.0.1"
@@ -30,27 +31,52 @@ class Shijuku_Connection extends Event{
 			this.tables.on('connected',()=>{
 				this._connected = true
 				console.log("conected to database")
-				this.onconnected()
+				this.onconnected?.call()
 			})
 		}
 	}
-	onconnected(){}
 	query(sql,callback){
 		console.log(sql," : ",SQLExec(sql))
 	}
 	load(...tables){
+		console.log("41",tables.length)
 		tables.forEach(table=>{
 			if(typeof table == "string"){
 				this.loadSQL(table)
-			}else if(typeof table == "object"){
-				this.loadObject(table)
-			}else{
+			}else if(table.constructor){
 				this.loadClass(table)
+			}else{
+				this.loadObject(table)
 			}
 		})
 		return this
 	}
+	exec(JS){
+		const exec = (cmd)=>{
+			console.log(`SQL : ${cmd}`)
+			var ret = this.tables.run(cmd)
+			console.log(ret)
+		}
+		if(JS == "tables"){
+			exec(".tables")
+		}else{
+			var path = JS.split('.')
+			var table = path[0]
+			if(this.tables[table]){
+				table = this.tables[table]
+				if(path[1]?.split('(')[0] == "push"){
+					var args = path.slice(1).join('.').split('(').slice(1).join('(').slice(0,-1)
+					args = eval(`[${args}]`)
+					table.insert(...args)
+					console.log(table.select())
+				}else{
+					console.log(table.select())
+				}
+			}
+		}
+	}
 	loadClass(...clazz){
+		console.log("54",clazz)
 		clazz.forEach(table=>{
 			var _table = Classparser(table)
 			this.tables.Register(_table)
@@ -105,7 +131,7 @@ module.exports = {
 			options.entities = options.tables
 		connections.push(sql)
 		if(options.entities){
-			sql.load(options.entities)
+			sql.load(...options.entities)
 		}
 		/*
 		if(options.init){

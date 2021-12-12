@@ -9,13 +9,28 @@ class Table{
 	constructor(database,data = {name:"view",}){
 		this.database = database
 		this.name = data.name.trim().split(/[^a-z;^A-Z]/)[0]
-		console.log(data.name,this.name)
 		if(data.clazz){
 			this.CLAZZ = data.clazz
 		}else{
 			this.CLAZZ
 		}
+		// console.log("INIT")
+		this.columns = data.row
+		const define = function(value,obj){
+			obj[`filter${value}`] = (v)=>{return obj.select("*",`${value} = '${v}' `)}
+			obj[`find${value}`] = (v)=>{return obj[`filter${value}`](v)[0]}
+		}
+		// console.log(data)//this.schema()
+		var rows = data.row.map(x=>x.name)
+		rows.forEach(x=>{
+			define(x,this)
+		})
 		this.#reload()
+	}
+	schema(){
+		var schema = this.database.run(`.schema ${this.name}`)
+
+		return schema
 	}
 	insert(...items){
 		/*
@@ -57,17 +72,14 @@ class Table{
 	}
 	random(number=this.length){
 		var n;
-		var ls = this.reduce((p,o)=>{
-			n = Math.random()<.5
-			if(p.length<number && n){
-				p.push(o)
-			}
-			return p
-		});
+		var ls = this.sort((a,b)=>Math.random()*2-1).slice(0,number)
 		return ls
 	}
-	search(){
-		
+	search(obj){
+		return this.filter(x=>x==obj)
+	}
+	sort(callback){
+		return this.select("*").sort(callback)
 	}
 	reduce(callback,value = []){
 		return this.select("*").reduce(callback,value)
@@ -108,12 +120,35 @@ class Table{
 	}
 	#length = 0
 	get length (){
-		if(!this.isFetch())return 0
+		if(!this.schema())return 0
 		var statement = this.database.run(`SELECT COUNT(*) FROM ${this.name}`)
 		statement = eval(statement)||[]
 		statement = statement[0]["COUNT(*)"]
-		console.log(statement)
-		return statement||0
+		statement = parseFloat(statement)||0
+		if(this.#length<statement){
+			console.log("update Length")
+			const define = function(l,obj){
+				Object.defineProperty(obj,l,{
+					get:()=>{
+						return obj.selectLine(l)
+					},
+					set:(value)=>{
+						obj.updateLine(l,value)
+					},
+				})
+			}
+			for(var l=this.#length;l<statement;l++){
+				define(l,this)
+			}
+			this.#length = statement
+		}
+		return this.#length
+	}
+	selectLine(id){
+		return this.select("*",{id})[0]||null
+	}
+	updateLine(id,newValue){
+		this.select(newValue,{id})
 	}
 	#reload(){
 		var length = this.length

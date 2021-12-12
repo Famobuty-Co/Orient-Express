@@ -25,12 +25,13 @@ var equivalents = {
 	"Number":FLOAT,
 	"Date":DATE,
 	"Boolean":BOOLEAN,
+	"Float":FLOAT,
+	"Integer":INTEGER,
 }
 function converts(value){
 	var type = typeof value
 	type == ""
 	if(type == "object"){
-		console.log(value)
 		type = a.constructor.name
 	}
 	var values = [x]

@@ -21,18 +21,16 @@ class App extends Event{
 			this.listen(port)
 		}
 	}
-	listen(port,callback){
-		const start = ()=>{
-			this.show()
-			this.onready()
-		}
-		http.createServer((req, res)=>{
-			var action = this.accesTable.find(req.method,req.url)
-			debug.info(req.url)
-			if(!req.url)return
-			var _res = new web.Response(res,req,this)
-			var _req = new web.Request(res,req,this)
-			try{
+	findAction(req,res){
+		return this.accesTable.find(req.method,req.url)
+	}
+	onrequest(req, res){
+		var action = this.findAction(req,res)
+		debug.info(req.url)
+		if(!req.url)return
+		var _res = new web.Response(res,req,this)
+		var _req = new web.Request(res,req,this)
+			// try{
 				if(action==noop){
 					var errorPage = this.errorPage||this.accesTable.sort()[0]
 					if( errorPage){
@@ -41,17 +39,25 @@ class App extends Event{
 						res.end()
 					}
 				}else{
-					try{
+					// try{
 						action(_req,_res)
-					}catch(e){
-						debug.error(e)
-						res.end()
-					}
+					// }catch(e){
+						// debug.error(e)
+						// res.end()
+					// }
 				}
-			}catch(e){
-				debug.error(e)
-				res.end()
-			}
+			// }catch(e){
+				// debug.error(e)
+				// res.end()
+			// }
+	}
+	listen(port,callback){
+		const start = ()=>{
+			this.show()
+			this.onready?.call()
+		}
+		http.createServer((req,res)=>{
+			this.onrequest(req,res)
 		}).listen(port);
 		debug.log("html route make")
 		if(this.database){
@@ -77,7 +83,11 @@ class App extends Event{
 		execSync(`start ${url}`)
 		return url
 	}
-	onready(){}
+	app(url=""){
+		url = `http://localhost:${this.port}/${url}`
+		execSync(`start ${url}`)
+		return url
+	}
 	addRoute(path,callback){
 		this.method(null,path,callback)
 	}
@@ -93,7 +103,6 @@ class App extends Event{
 		if(!method)method = "default"
 		this.accesTable.append(path,{method:method.toUpperCase(),callback})
 	}
-
 	path(...dirsorfile){
 		var url = '/'+dirsorfile.join(`/`)
 		var path = '.'+url
