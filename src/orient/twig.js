@@ -43,7 +43,8 @@ htmlcode.push(HTMLEndtag)
 htmlcode.push(HTMLEndtagend)
 
 // var HTMLcode = HTMLParse.addToken(/<[a-z]*(-[a-z]*)?([ ;\n;\r;\t]*([a-z]*(=("?[^ ]*"?))?)?)*>/,"HTMLcode",htmlstart)
-var HTMLcontent = HTMLParse.addToken(/[\w\s\d]/i,"htmlcontent",[
+// var HTMLcontent = HTMLParse.addToken(/[ ;\n;\t;\r;\s;\w\:\-\+\=\&\*]/i,"htmlcontent",[
+var HTMLcontent = HTMLParse.addToken(/[^{^<]/i,"htmlcontent",[
 	twigvarend,twigcodeend,HTMLcommentend,HTMLtagend,-1,HTMLEndtagend
 ],[HTMLEndtagstart])
 // twigstrat.push(HTMLcontent,HTMLcode)
@@ -173,7 +174,9 @@ function execute(code,option,_env){
 			}
 		},
 	})
+	console.log(execute.env.blocks)
 	if(execute.env.template){
+		console.log(code)
 		return execute(execute.env.template.content,execute.env.vars,execute.env)
 	}else{
 		return execute.env.localcontent.join('')
@@ -223,7 +226,7 @@ env.template = function(file){
 	console.log(env.path)
 	var _path = path.join(env.path,file.slice(1,-1))
 	var content = loadFile(_path)
-	console.log(content,_path)
+	// console.log(content,_path)
 	execute.env.template = {
 		content,
 	}
@@ -241,6 +244,7 @@ env.appendBlock = function(){
 		block = execute.env.blocks.get(execute.env.currentBlock.name)
 	}else{
 		execute.env.blocks.set(execute.env.currentBlock.name,execute.env.currentBlock)
+		console.log("add to blocks :",execute.env.currentBlock.name)
 	}
 	execute.env.currentBlock.parent.push(block.array.join(''))
 	execute.env.localcontent = execute.env.currentBlock.parent

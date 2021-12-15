@@ -3,6 +3,7 @@ const path = require("path");
 const { noop, loadFile } = require("../extra/static");
 const {Annoted } = require("../extra/annoted");
 const orient = require("../orient");
+const { create } = require("domain");
 App = require("./app")
 
 class Entity{
@@ -11,6 +12,35 @@ class Entity{
 		return this
 	}
 
+}
+
+class Controller{
+	annoations = new Map
+	constructor(name){
+		this.filename = name
+	}
+	setRoute(path){
+		this.annoations.set("route",path)
+	}
+	#pages = []
+	createPage(name,render,renderoptn,page){
+		this.#pages.push({
+			name,route:name,
+			render,renderoptn,
+		})
+	}
+	toString(){
+return `class ${this.filename}{
+	"route /${this.annoations.get("route")}"
+${this.#pages.map(page=>{
+	return `	${page.name}(){
+		"route /${page.route}"
+		return this.render("${page.render}",
+			${page.renderoptn}
+		);
+	}`}).join('\n')}
+}`
+	}
 }
 
 class ClassApp extends App{
@@ -67,6 +97,9 @@ class ClassApp extends App{
 			Annoted(controller)
 			var _templatesPath = this.#templatesPath
 			controller.prototype.database = this.database
+			controller.prototype.loadFile = function(file){
+				return loadFile(file)
+			}
 			controller.prototype.render = function(file,option){
 				var _path = path.join(process.cwd(),_templatesPath,file)
 				var content = loadFile(_path)
@@ -85,7 +118,6 @@ class ClassApp extends App{
 							controller._instance.response = res
 							controller._instance.app = this
 							var render = controller._instance[m](req, res)
-							console.log(render)
 							if(typeof render == "string"){
 								res.send(render)
 							}
@@ -135,7 +167,13 @@ class ClassApp extends App{
 		this.name = name
 	}
 }
-
-module.exports = function (name){
+var _create = function (name){
 	return new ClassApp(name)
 }
+_create.createController = function(name){
+	return new Controller(name)
+}
+_create.createEntity = function(name){
+	return new Entity(name)
+}
+module.exports = _create

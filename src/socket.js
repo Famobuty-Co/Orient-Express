@@ -14,7 +14,45 @@ function websocket(req,res){
 		var swk = raw.indexOf('sec-webSocket-key')
 		swk = raw[swk+1]
 
+		
 		var socket = req.socket
+		console.log("I got a Socket")
+		var address = socket.address()
+		console.log(socket.connecting)
+		socket.on('connect',()=>{
+			console.log("i connted")
+		})
+		socket.on('ready',()=>{
+			console.log("i ready")
+		})
+		socket.connect(address.port)
+		socket.write("hello")
+		socket.end();
+		// console.log(socket.connecting)
+		// if (req.timeoutCb) {
+		// 	socket.setTimeout(0, req.timeoutCb);
+		// 	req.timeoutCb = null;
+		// }
+		// console.log(socket.address())
+
+		// console.log(socket.on)
+		// socket.on('data',(data)=>{
+		// 	console.log(`Server says: ${data.toString('utf-8')}`)
+		// })
+		// socket.on('socket',(data)=>{
+		// 	console.log(`Server says: ${data.toString('utf-8')}`)
+		// })
+
+		// req.emit('information', {
+		// 	statusCode: res.statusCode,
+		// 	statusMessage: res.statusMessage,
+		// 	httpVersion: res.httpVersion,
+		// 	httpVersionMajor: res.httpVersionMajor,
+		// 	httpVersionMinor: res.httpVersionMinor,
+		// 	headers: res.headers,
+		// 	rawHeaders: res.rawHeaders
+		// });
+
 		// socket.cork();
 		// socket.write("hello")
 		// socket.uncork();

@@ -51,11 +51,22 @@ class parserArgs extends Map{
 		var temp = ""
 		args.forEach(x=>{
 			if(x.startsWith('-')){
+				if(temp){
+					this.set(temp.slice(1),true)
+				}
 				temp = x
 			}else{
-				this.set(temp.slice(1),x)
+				if(temp){
+					this.set(temp.slice(1),x)
+				}else{
+					console.log(x)
+				}
+				temp = null
 			}
 		})
+		if(temp && temp != null){
+			this.set(temp.slice(1),true)
+		}
 	}
 	getIndex(n){
 		return this.#array[n]

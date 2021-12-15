@@ -263,7 +263,7 @@ class AutomateBuilder extends AutomateBase{
 	}
 	execute(text,regroup,actions){
 		var groups = this.regroup(text,regroup)
-		// console.log(groups)
+		console.log(groups)
 		groups.forEach(x=>{
 			var fx = x.output
 			fx = typeof fx == "function"?fx:actions[fx]

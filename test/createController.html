@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<title>Page Title</title>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+	<script>
+class Controller{
+	annoations = new Map
+	constructor(name){
+		this.filename = name
+	}
+	setRoute(path){
+		this.annoations.set("route",path)
+	}
+	#pages = []
+	createPage(name,render,renderoptn,page){
+		this.#pages.push({
+			name,route:name,
+			render,renderoptn,
+		})
+	}
+	toString(){
+return `class ${this.filename}{
+	"route /${this.annoations.get("route")}"
+${this.#pages.map(page=>{
+	return `	${page.name}(){
+		"route /${page.route}"
+		return this.render("${page.render}",
+			${page.renderoptn}
+		);
+	}`}).join('\n')}
+	createForm(){}
+	createList(){}
+	createDeleteList(){}
+}`
+	}
+}
+
+
+function createController(name){
+	return new Controller(name)
+}
+var entity = "users"
+var controller = createController(entity);
+					controller.setRoute(entity);
+					controller.createPage("create",`/${entity}/create.html`,
+					`{form:this.createForm(this.app.database.tables.${entity})}`,"{form}"
+					)
+					controller.createPage("update",`/${entity}/update.html`,
+					`{form:this.createForm(this.app.database.tables.${entity})}`,"{form}"
+					)
+					controller.createPage("read",`/${entity}/read.html`,
+					`{table:this.createList(this.app.database.tables.${entity})}`,"{table}"
+					
+					)
+					controller.createPage("delete",`/${entity}/delete.html`,
+					`{table:this.createDeleteList(this.app.database.tables.${entity})}`,"{table}"
+					)
+	console.log(controller.toString())
+	clazz = eval(`clazz = ${controller.toString()}`)
+	var instance = new clazz()
+	instance.render = (e,v)=>[e,v]
+	instance.app = {
+		database:{
+			tables:{
+				users:[
+					{username:"jean",password:"toto",},
+					{username:"jojo",password:"tata",}
+				],
+			},
+		},
+	}
+	</script>
+</head>
+<body>
+	
+</body>
+</html>

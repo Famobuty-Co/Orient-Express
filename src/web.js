@@ -65,10 +65,20 @@ class Response{
 			file = file=="/"?"index.html":file;
 			file="./"+file
 		}
+		// if(fs.existsSync(file)){
+		// 	console.log("send file :",file)
+		// 	console.log(this._req.rawHeaders,this._res)
+		// 	// this._res.setHeader("Content-Type", mime.lookup(file));
+		// 	fs.createReadStream(file,{autoClose:true,}).pipe(this._res)
+		// }else{
+		// 	this._res.end();
+		// }
 		if(fs.existsSync(file)){
-			// this._res.setHeader("Content-Type", mime.lookup(file));
-			fs.createReadStream(file).pipe(this._res)
+			console.log("acces to "+file)
+			var content = fs.readFileSync(file)
+			this._res.end(content)
 		}else{
+			console.log("can't acces to "+file)
 			this._res.end();
 		}
 	}
@@ -134,6 +144,11 @@ class Request{
 			this._req.on('end',()=>{
 				resolve(parserQuery(this.data))
 			})
+		})
+	}
+	on(event){
+		return new Promise(resolve=>{
+			this._req.on(event,resolve)
 		})
 	}
 }

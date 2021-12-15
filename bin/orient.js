@@ -85,11 +85,13 @@ function separateCase(cases,args){
 }
 
 function fast(args){
-	var app = orient.fast("app")
-	var type = args.get("acces")||"free"
-	app.addRoute("/",orient.acces[type])
-	app.login(args.get("port")||orient.free_port)
-	if(args.get("show"))app.browser()
+	return new Promise((resolve)=>{
+		var app = orient.fast("app")
+		var type = args.get("acces")||"free"
+		app.addRoute("/",orient.acces[type])
+		app.login(args.get("port")||orient.free_port)
+		if(args.get("show"))app.browser()
+	})
 }
 function _class(args){
 	if(FS.existsSync("./package.json")){
@@ -115,6 +117,35 @@ function _class(args){
 			case "make:controller":
 				return new Promise(async (resolve)=>{
 					var name = await cli.question("Choose Controller Name : \n")
+					var controller = orient.class.createController(name);
+					controller.setRoute(name)
+					var routeName;
+					while(routeName = await cli.question("Create new Route Name : \n")){
+						var filename = await cli.question("Choose HTML File Name:\n")
+						filename +=".html"
+						if(!FS.existsSync(filename)){
+							FS.writeFileSync(path.join("src","templates",filename),`<!DOCTYPE html>
+<html lang="FR-fr">
+	<head>
+		<title>${routeName}</title>
+		<meta charset="UTF-8" />
+	</head>
+	<body>
+		<h1>${routeName}</h1>
+	</body>
+</html>`)
+						}
+						controller.createPage(routeName,filename);
+					}
+					if(!FS.existsSync(name+".js")){
+						FS.writeFileSync(path.join("src","controllers",name+".js"),controller.toString())
+					}
+					
+					resolve()
+				})
+			case "make:component":
+				return new Promise(async (resolve)=>{
+					var name = await cli.question("Choose Component Name : \n")
 					console.log(`create controller ${name}`)
 					resolve()
 				})
@@ -139,6 +170,24 @@ function _class(args){
 					resolve()
 				})
 			case "make:crud":
+				var entity = args.getIndex(2)
+				if(entity){
+					var controller = orient.class.createController(entity);
+					controller.setRoute(entity);
+					controller.createPage("new",`/${entity}/new.html`,""
+					
+					)
+					controller.createPage("read",`/${entity}/read.html`,
+					`{this.app.database.tables.person.findfirstname("jean")}`
+					
+					)
+					controller.createPage("update",`/${entity}/update.html`,
+					)
+					controller.createPage("delete",`/${entity}/delete.html`,
+					)
+				}else{
+					console.alert("please choose a entity orient class make:entity")
+				}
 				break;
 			default:
 				return new Promise((resolve)=>{
@@ -149,7 +198,11 @@ function _class(args){
 					app.setEntities("src/entities")
 					console.log("class app")
 					app.login(args.get("port")||orient.free_port)
-					if(args.get("show"))app.browser()
+					console.log(args,args.has("show"))
+					if(args.has("show")){
+						console.log("open in browser")
+						app.browser()
+					}
 				})
 		}
 	}else{
