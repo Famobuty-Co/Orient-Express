@@ -1,14 +1,34 @@
 const {create, Component} = require("./ui")
 const ln8 = require("../ln8")
+const { url } = require("../extra/static")
+const mime = require("../mime/mime")
 // eerror /(http?s\:\/\/?([a-z]*\.)[a-z;\-]+\.[a-z;\-]+(\/[a-z;\-]+)?)(\?([a-z;\-]+=[a-z;\-]+&?)+)?)|\/[a-z;\-]+/.test(field)
 
 class Slide extends Component{
-	constructor(data,options){
+	constructor(data,options = {}){
 		super("div")
+		this.classList.add('slide')
 		var div = create("div")
 		Object.keys(data).forEach(field=>{
+			if(typeof options[field] == "object" && options[field] == null)return
 			var value = data[field]
-			if(options[field]){
+			console.log(value,url.test(value))
+			if(url.test(value)){
+				var m = mime.lookup(value)
+				if(/image/.test(m)){
+					var thumbnail = create("img")
+					thumbnail.setAttribute("src",value)
+					div.append(thumbnail)
+					thumbnail.classList.add(field)
+				}else{
+					var more = create("button",{
+						text:"more",
+					})
+					more.addEventListener("click",`location.assign('${value}')`)
+					div.append(more)
+					more.classList.add(field)
+				}
+			}else if(options[field]){
 				var comp = create(options[field])
 				comp.write(value)
 				div.append(comp)
@@ -25,40 +45,39 @@ class Slide extends Component{
 				div.append(image)
 			}else{
 				var text = create("p")
-				text.write(field)
-				div.append(value)
+				text.write(value)
+				div.append(text)
+				text.classList.add(field)
 			}
 		})
 		this.append(div)
-		var more = create("button",{
-			text:"more",
-		})
-		var moreURL = data["more"]
-		more.addEventListener('click',`function(){location.assign('${moreURL}')}`)
-		this.append(more)
+		// var more = create("button",{
+		// 	text:"more",
+		// })
+		// var moreURL = data["more"]
+		// more.addEventListener('click',`function(){location.assign('${moreURL}')}`)
+		// this.append(more)
 	}
 }
-
+function changeSlide(initiator) {
+	var i;
+	var slideshow = initiator.parentElement.parentElement
+	var dots = slideshow.querySelectorAll(`.dot`);
+	var slides = slideshow.querySelector(`.slideshow-container`);
+	dots = [...dots]
+	var n = dots.indexOf(initiator)
+	if (n > slides.length) {slideIndex = 1}
+	if (n < 1) {slideIndex = slides.length}
+	var x = n/dots.length*100
+	var css = `translate(-${x}%)`
+	slides.style.transform = css
+	for (i = 0; i < dots.length; i++) {
+		dots[i].className = dots[i].className.replace(" active", "");
+	}
+	initiator.className += " active";
+}
 class Slides extends Component{
-	static script = (`
-		function changeSlide(initiator) {
-			var i;
-			var slideshow = initiator.parentElement.parentElement
-			var dots = slideshow.querySelectorAll(\`.dot\`);
-			var slides = slideshow.querySelector(\`.slideshow-container\`);
-			dots = [...dots]
-			var n = dots.indexOf(initiator)
-			if (n > slides.length) {slideIndex = 1}
-			if (n < 1) {slideIndex = slides.length}
-			var x = n/dots.length*100
-			var css = \`translate(-\${x}%)\`
-			slides.style.transform = css
-			for (i = 0; i < dots.length; i++) {
-				dots[i].className = dots[i].className.replace(" active", "");
-			}
-			initiator.className += " active";
-		}
-	`)
+	static script = changeSlide.toString()
 	static style = (`.dot {
 		cursor: pointer;
 		height: 15px;
@@ -95,6 +114,7 @@ class Slides extends Component{
 		
 		this.append(this.div)
 		this.div.classList.add('slideshow-container')
+		this.dots.classList.add('slide-dots')
 		this.dots.style.position = 'absolute';
 		this.append(this.dots)
 	}
@@ -112,7 +132,7 @@ class Slides extends Component{
 		
 		this.dots.append(dot)
 	}
-	static create(slides,options){
+	static create(slides,options = {}){
 		var slide = new Slides()
 		slides.forEach(x=>{
 			var s = new Slide(x,options)
@@ -124,6 +144,7 @@ class Slides extends Component{
 
 module.exports = {Slides,setup:(app)=>{
 	app.createSlides = Slides.create
+	
 	var page = app.constructor.page
 	page.prototype.SlidesCount = 0
 	page.prototype.createSlides = function(...args){
@@ -134,4 +155,10 @@ module.exports = {Slides,setup:(app)=>{
 		this.SlidesCount++
 		return Slides.create(...args)
 	}
+	app.addRoute("/scripts/slides.js",(req,res)=>{
+		res.send(`
+			${changeSlide.toString()}
+			style = document.createElement('style');style.innerHTML = \`${Slides.style}\`;document.head.appendChild(style);
+		`)
+	})
 },}

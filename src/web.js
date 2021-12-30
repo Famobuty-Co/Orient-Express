@@ -118,13 +118,15 @@ class Request{
 			type:/mobile/ig.test(res["user-agent"])?"PHONE":"DESKTOP"
 		}
 		this.originalUrl = req.url
+		this.decodeURL = decodeURI(req.url)
+		console.log(this.file)
 
 		var s = req.url.search(/\?/)
 		this.search = s>=0?req.url.slice(s):""
 
 		this.query = parserQuery(this.search)
-		this.path = req.url.split("/").slice(0,-1).join('/')
-		this.page = req.url.split("/").slice(-1).join('/')
+		this.path = this.decodeURL.split("/").slice(0,-1).join('/')
+		this.page = this.decodeURL.split("/").slice(-1).join('/')
 		this.file = this.page.search('.')!=-1?this.page:null
 	}
 	get method(){

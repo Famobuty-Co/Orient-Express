@@ -179,6 +179,7 @@ class AutomateBuilder extends AutomateBase{
 		var token;
 		// var c = entree.next()
 		entree.forEach(c=>{
+		// console.log(culsym,stat)
 		if(token = this.getToken(culsym,stat)){ 
 				// console.log(token,stat)
 				tokensLS.push({
@@ -263,7 +264,7 @@ class AutomateBuilder extends AutomateBase{
 	}
 	execute(text,regroup,actions){
 		var groups = this.regroup(text,regroup)
-		console.log(groups)
+		// console.log(groups)
 		groups.forEach(x=>{
 			var fx = x.output
 			fx = typeof fx == "function"?fx:actions[fx]

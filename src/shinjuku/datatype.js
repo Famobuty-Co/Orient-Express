@@ -42,8 +42,20 @@ function converts(value){
 	})
 	return values
 }
-
+function getType(text){
+	text =text.toLowerCase()
+	var type = null
+	var keys = Object.keys(equivalents)
+	keys.forEach((k)=>{
+		var x = equivalents[k]
+		if(x.constructor.name.toLowerCase() == text){
+			type = k
+		}
+	})
+	return type
+}
 module.exports = {
 	datatypes,
-	converts
+	converts,
+	getType
 }

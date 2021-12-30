@@ -1,7 +1,12 @@
 const noop = ()=>{}
+const url = /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/
 
 const fs = require("fs");
 const path = require("path");
+function getFileName(file){
+	return path.parse(file).base
+}
+
 function loadFile(file){
 	if(!path.isAbsolute(file)){
 		file = file=="/"?"index.html":file;
@@ -95,6 +100,7 @@ function createClass(obj,name){
 
 module.exports = {
 	noop,
-	include:loadFile,
-	loadFile,GUID,createClass,stringify
+	include:loadFile,getFileName,
+	loadFile,GUID,createClass,stringify,
+	url,
 }

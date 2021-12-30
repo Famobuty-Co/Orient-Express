@@ -218,7 +218,10 @@ class Component {
 		if(!callback && typeof callback!="function")return
 		event = 'on'+event
 		if( typeof callback == "function" ){
-			// callback = 
+			
+		}
+		if( typeof callback == "string" ){
+			callback = `(event)=>{${callback}}`
 		}
 		// if(this.hasAttribute(event)){
 		// 	callback = callback
@@ -254,6 +257,7 @@ class Component {
 	toString(){
 		var attrs = []
 		this._attributes.forEach((v,k)=>{
+			if(!v)return
 			var t = v.toString()
 			if(k.startsWith('on')){
 				t = this.#createStringCallBack(t)

@@ -38,17 +38,21 @@ class Shijuku_Connection extends Event{
 	query(sql,callback){
 		console.log(sql," : ",SQLExec(sql))
 	}
-	load(...tables){
+	load(tables){
 		console.log("41",tables.length)
-		tables.forEach(table=>{
-			if(typeof table == "string"){
-				this.loadSQL(table)
-			}else if(table.constructor){
-				this.loadClass(table)
-			}else{
-				this.loadObject(table)
-			}
-		})
+		if(tables instanceof Array){
+			tables.forEach(table=>{
+				if(typeof table == "string"){
+					this.loadSQL(table)
+				}else if(table.constructor){
+					this.loadClass(table)
+				}else{
+					this.loadObject(table)
+				}
+			})
+		}else{
+			this.loadObjects(tables)
+		}
 		return this
 	}
 	exec(JS){
@@ -63,10 +67,13 @@ class Shijuku_Connection extends Event{
 			var path = JS.split('.')
 			var table = path[0]
 			if(this.tables[table]){
+				console.log(table)
 				table = this.tables[table]
+				console.log(path)
 				if(path[1]?.split('(')[0] == "push"){
 					var args = path.slice(1).join('.').split('(').slice(1).join('(').slice(0,-1)
 					args = eval(`[${args}]`)
+					console.log("push",args)
 					table.insert(...args)
 					console.log(table.select())
 				}else{
@@ -82,6 +89,12 @@ class Shijuku_Connection extends Event{
 			this.tables.Register(_table)
 		})
 		return this
+	}
+	loadObjects(objs){
+		var _tables = Objectparser(objs)
+		_tables.forEach(_table=>{
+			this.tables.Register(_table)
+		})
 	}
 	loadObject(...clazz){
 		clazz.forEach(table=>{
@@ -130,8 +143,9 @@ module.exports = {
 		if(!options.entities)
 			options.entities = options.tables
 		connections.push(sql)
+		console.log(options.entities)
 		if(options.entities){
-			sql.load(...options.entities)
+			sql.load(options.entities)
 		}
 		/*
 		if(options.init){

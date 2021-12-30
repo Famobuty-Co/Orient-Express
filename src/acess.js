@@ -1,7 +1,32 @@
-const {loadFile} = require('./extra/static')
+const {loadFile} = require('./extra/static');
+const fs = require('fs');
+const mime = require('./mime/mime');
 const orient = require('./orient/index')
 
+function stream(file,res){
+	console.log(fs.existsSync(file),file)
+	if(fs.existsSync(file)){
+		fs.createReadStream(file).pipe(res)
+	}else{
+		res.end();
+	}
+}
+
 acces = {
+	stream:function(req, res){
+		var dir = "./"+req.decodeURL
+		stream(dir,res._res)
+	},
+	images:function (req, res) {
+		var file = req.decodeURL.split('/').slice(-1).join('/');
+		var dir = "./"+req.decodeURL.split('/').slice(0,-1).join('/')+"/";
+		var _mime = mime.lookup(file)
+		if(/image/.test(_mime)){
+			stream(dir+file,res._res)
+		}else{
+			res.end()
+		}
+	},
 	free:function (req, res) {
 		
 		var file = req.originalUrl.split('/').slice(-1).join('/');

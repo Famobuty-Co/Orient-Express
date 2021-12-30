@@ -165,8 +165,16 @@ class ClassApp extends App{
 	constructor(name){
 		super()
 		this.name = name
+		use("websocket",this)
+		use("form",this)
+		use("admin",this)
 	}
 }
+function use(lib,that){
+	var {setup} = require(`../bundles/${lib}`);
+	setup(that)
+}
+
 var _create = function (name){
 	return new ClassApp(name)
 }

@@ -44,6 +44,7 @@ class Table{
 			return `(${cols})`
 		})
 		var rows = `(${Object.keys(items[0])})`
+		console.log(`${rows} values ${items_sql}`)
 		var statement = this.database.run(`INSERT INTO ${this.name} ${rows} VALUES ${items_sql};`)
 		return statement
 	}

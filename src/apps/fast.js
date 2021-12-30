@@ -2,6 +2,10 @@ App = require("./app")
 const {Component,create,createEvent,Document} = require("../bundles/ui");
 const Table = require('../shinjuku/table');
 const Database = require("../shinjuku/database");
+const { include,getFileName } = require("../extra/static");
+const acces = require('../acess')
+const path = require('path')
+const orient = require("../orient");
 
 class FastPage extends Document{
 	#app = null
@@ -9,6 +13,10 @@ class FastPage extends Document{
 		super()
 		this.path = root
 		this.#app = app
+	}
+	addScript(file){
+		var content = include(file);
+		this.scripts.write(content);
 	}
 	append(...args){
 		if(this.body){
@@ -18,14 +26,32 @@ class FastPage extends Document{
 		}
 		return this
 	}
+	#isrendered = false
+	#renderFile
+	#renderOption
+	render(file,option = {}){
+		this.#isrendered = true
+		this.#renderFile = file
+		this.#renderOption = option
+		this.#renderOption.app = this.#app
+	}
 	static loadEvent = "pageloading"
 	createSession(request){
-		var page = this.clone()
-		if(page.hasEventListener(FastPage.loadEvent)){
-			page.dispatchEvent(createEvent(FastPage.loadEvent,{target:page,app:this.#app,request}))
-			page.removeEventListener(FastPage.loadEvent)
+		if(this.#isrendered){
+			var _path = path.join(process.cwd(),this.#app.getPageDir(),this.#renderFile)
+			var content = include(_path)
+			this.#renderOption.request = request
+			return orient.parse(content,this.#renderOption,{
+			path:path.join(process.cwd(),this.#app.getPageDir()),
+			})
+		}else{
+			var page = this.clone()
+			if(page.hasEventListener(FastPage.loadEvent)){
+				page.dispatchEvent(createEvent(FastPage.loadEvent,{target:page,app:this.#app,request}))
+				page.removeEventListener(FastPage.loadEvent)
+			}
+			return page
 		}
-		return page
 	}
 	getRoute(){
 		return this.path
@@ -40,6 +66,22 @@ class FastEntity{
 }
 class FastApp extends App{
 	static page = FastPage
+	images = new Map()
+	loadImage(file,name){
+		if( ! name ){
+			name = getFileName(file)
+		}
+	}
+	setImageDir(dir){
+		this.addRoute(dir,acces.images)
+	}
+	#pagePath = "./"
+	setPageDir(dir){
+		this.#pagePath = dir
+	}
+	getPageDir(){
+		return this.#pagePath
+	}
 	constructor(name){
 		super()
 		this.name = name
@@ -60,10 +102,19 @@ class FastApp extends App{
 	}
 	#hasDatabase = false
 	#entities = {}
+	setEntities(obj){
+		Object.keys(obj).forEach(x=>{
+			this.setEntity(x,obj[x])
+		})
+	}
+	setEntity(name,table){
+		this.#entities[name] = table
+		if(!this.#hasDatabase)
+			this.#hasDatabase = true
+	}
 	createEntity(name){
 		var table = new FastEntity()
-		this.#entities[name] = table
-		this.#hasDatabase = true
+		setEntity(name,table)
 		return table
 	}
 	getEntity(name){
