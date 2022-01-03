@@ -21,7 +21,7 @@ acces = {
 		var file = req.decodeURL.split('/').slice(-1).join('/');
 		var dir = "./"+req.decodeURL.split('/').slice(0,-1).join('/')+"/";
 		var _mime = mime.lookup(file)
-		if(/image/.test(_mime)){
+		if(/image/.test(_mime)||/video/.test(_mime)||/audio/.test(_mime)){
 			stream(dir+file,res._res)
 		}else{
 			res.end()

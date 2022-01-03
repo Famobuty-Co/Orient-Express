@@ -2,9 +2,10 @@ const {execSync} = require('child_process')
 const path = require("path")
 
 var isWin = process.platform === "win32";
-const sqlite = __dirname.split('\\').slice(0,-2).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
-const createdb = __dirname.split('\\').slice(0,-2).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
-
+const sqlite = isWin?__dirname.split('\\').slice(0,-2).join('\\')+`\\libs\\sqlite3.exe`:"sqlite3"
+//__dirname.split('\\').slice(0,-2).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
+// const createdb = __dirname.split('\\').slice(0,-2).join('\\')+`\\libs\\sqlite3${isWin?".exe":""}`
+const createdb = sqlite
 
 function sqlite_create(database){
 	/*
@@ -35,7 +36,7 @@ function sqlite_exec(database,sql,args=["cmd","json","bail"],callback){
 	//if(!fs.existsSync(database))throw `Database "${database}" not exist`//when you setup it can exist
 	if(!Array.isArray(sql)){
 		if(database.includes('"'))throw `command replace '"' by an other character : '${sql}'`
-		cmd = `${sqlite} ${database} "${sql}" -json`
+		cmd = `${sqlite} ${database} "${sql}" -csv`
 		var out = execSync(cmd)
 		/*,{
 			stdio:[0,1,2],
@@ -47,10 +48,46 @@ function sqlite_exec(database,sql,args=["cmd","json","bail"],callback){
 			//callback(`${stdio}`,stderr)
 		});*/
 		out = out.toString()
+		var resp = out
+		if(/SELECT/.test(sql)){
+			var columns = sql.split(/select /i).slice(1).join('select').split(/ from /i)[0]
+			if(/$\*/.test(columns)){
+
+			}else{
+				columns = columns.split(",")
+			}
+			console.log("columns ",columns)
+			resp = []
+			console.log("ouput ",out)
+			out.split("\n").forEach(x=>{
+				var concat = []
+				var obj = {}
+				var n = 0
+				var add = ()=>{
+					obj[columns[n]] = concat
+					concat = []
+					n++
+				}
+				x.split('').forEach(x=>{
+					if(x==","){
+						add()
+					}else{
+						concat.push(x)
+					}
+				})
+				add()
+				resp.push(obj)
+			})
+			console.log("return ",resp)
+		// }else{
+		// 	console.log("return ",out)
+			// resp.push(out)
+		}
+		
 		if(callback){
-			callback(out)
+			callback(resp)
 		}else{
-			return out
+			return resp
 		}
 
 	}else{

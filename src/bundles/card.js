@@ -62,7 +62,7 @@ class Grid extends Component{
 		return card
 	}
 }
-module.exports = {Card,setup:(app)=>{
+module.exports = {Card,Grid,setup:(app)=>{
 	app.createGrid = Grid.create
 	app.createCard = Card.create
 },}

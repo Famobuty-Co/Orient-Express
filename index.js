@@ -22,6 +22,7 @@ orient.websocket = require("./src/socket")
 
 orient.class = require("./src/apps/class")
 orient.express = require("./src/apps/express")
+orient.functional = require("./src/apps/functional")
 orient.fast = require("./src/apps/fast")
 
 module.exports = orient

@@ -6,11 +6,16 @@ const HTMLParse = new AutomateBuilder
 
 var htmlcode = []
 
+
 var twigcodestart = HTMLParse.addToken("{%","startcode",[HTMLParse.ALL])
 var twigcodeend = HTMLParse.addToken("%}","endcode",[twigcodestart],[0])
 var twigvarstart = HTMLParse.addToken("{{","startvar",[HTMLParse.ALL])
 var twigvarend = HTMLParse.addToken("}}","endvar",[twigvarstart],[0])
-		
+
+var startcomment = HTMLParse.addToken("{#","startcomment",[HTMLParse.ALL])
+var comment = HTMLParse.addToken(/^[\#]/,"comment",[startcomment,-1])
+var endcomment = HTMLParse.addToken("#}","endcomment",[startcomment,comment],[0])
+
 // var HTMLdecalre = HTMLParse.addToken("<!DOCTYPE html>","HTMLdecalre",[0])
 // var htmlstart = [0,twigvarend,twigcodeend,HTMLdecalre,-1]
 // htmlcode.push(HTMLdecalre)
@@ -99,6 +104,7 @@ var twigELSE = HTMLParse.addToken("else","twigELSE",[twigcodestart,indentspace],
 var twigIFEnd = HTMLParse.addToken("endif","twigIFEnd",[twigcodestart,indentspace],[twigcodeend])
 
 var twigTemplate = HTMLParse.addToken("template","twigTemplate",[twigcodestart,indentspace],[twigcodeend])
+var twigTemplate = HTMLParse.addToken("include","twigInclude",[twigcodestart,indentspace],[twigcodeend])
 
 var twigStyle = HTMLParse.addToken("style","twigStyle",[twigcodestart,indentspace],[twigcodeend])
 var twigScript = HTMLParse.addToken("script","twigScript",[twigcodestart,indentspace],[twigcodeend])
@@ -108,6 +114,7 @@ var content = HTMLParse.addToken(/[^{^%^}]/,"content",[HTMLParse.ALL])
 
 regroup = [
 	[twigStringstart,twigStringcontent,twigStringend],
+	[startcomment,comment,endcomment],
 	// [HTMLcommentstart,HTMLcomment,HTMLcommentend],
 	// [HTMLEndtagstart,HTMLEndtag,HTMLEndtagend],
 	// [HTMLtagstart,HTMLtag,HTMLtagend],
@@ -118,6 +125,12 @@ regroup = [
 	[content]
 ]
 var env = {}
+function tempexec(code,option,_env){
+	var tempenv = execute.env
+	var result = execute(code,option,_env)
+	execute.env = tempenv
+	return result
+}
 function execute(code,option,_env){
 	var blocks = new Map()
 	var templates = new Set()
@@ -129,6 +142,7 @@ function execute(code,option,_env){
 	var curentfxArgs = new Set()
 	var localcontent = html
 	var ingore = 0
+	var comment = false
 
 
 	execute.env = _env||{
@@ -145,6 +159,7 @@ function execute(code,option,_env){
 
 	HTMLParse.execute(code,regroup,{
 		"twigTemplate":()=>{curentfxName = "template"},
+		"twigInclude":()=>{curentfxName = "include"},
 		"twigBlockStart":()=>{curentfxName = "createBlock"},
 		"twigBlockEnd":()=>{curentfxName = "appendBlock"},
 		"twigIFStart":()=>{curentfxName = "if"},
@@ -218,6 +233,9 @@ function execute(code,option,_env){
 			} 
 		},
 		"twigInStart":()=>{},
+		"startcomment":()=>{comment = true},
+		"comment":()=>{},
+		"endcomment":()=>{comment = false},
 		"indent":()=>{},
 		default:(text,token)=>{
 			// console.log(text,token)
@@ -249,18 +267,26 @@ env.for = function(...args){
 env.endfor = function(condition){
 	var _for = execute.env.fors.pop()
 	var value = []
+	currentBlock = execute.env.currentBlock
 	var repeated = _for.repeated.join('').trim()
 	for( itvar of _for.fromvar ){
 		((name)=>{
 			var obj = Object.assign({},execute.env.vars)
 			obj[_for.itvar] = name
-			var code = execute(repeated,obj)
+			var code = tempexec(repeated,obj)
 			console.log(name,code)
 			value.push(code)
 		})(itvar)
 	}
-	execute.env.localcontent = _for.parent
-	execute.env.localcontent.push(value.join(''))
+	if(currentBlock){
+		execute.env.currentBlock = currentBlock
+		execute.env.currentBlock.array.push(value.join(''))
+		execute.env.localcontent = execute.env.currentBlock.array
+		console.log(currentBlock)
+	}else{
+		execute.env.localcontent = _for.parent
+		execute.env.localcontent.push(value.join(''))
+	}
 }
 env.if = function(condition){
 	// console.log(condition)
@@ -304,6 +330,11 @@ env.script = function(file){
 }
 env.use = function(file){
 	execute.env.localcontent.push(`<script src="${file.slice(1,-1)}"></script>`)
+}
+env.include = function(file){
+	var _path = path.join(env.path,file.slice(1,-1))
+	var content = loadFile(_path)
+	execute.env.localcontent.push(content)
 }
 env.template = function(file){
 	console.log(env.path)

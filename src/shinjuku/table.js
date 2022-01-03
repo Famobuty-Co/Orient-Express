@@ -33,12 +33,10 @@ class Table{
 		return schema
 	}
 	insert(...items){
-		/*
 		items.forEach(item=>{
 			if(item instanceof this.CLAZZ)
 			this._Insert.push(item)
 		})
-		*/
 		var items_sql = items.map(x=>{
 			var cols =Object.values(x).map(x=>`'${x}'`)
 			return `(${cols})`
@@ -63,7 +61,7 @@ class Table{
 			where = "WHERE "+condition
 		}
 		var statement = this.database.run(`SELECT ${columns} FROM ${this.name} ${where}`)
-		statement = eval(statement)||[]
+		statement = statement
 		if(columns == "*"){
 			statement.forEach(row=>{
 				this._array[row.id] = row

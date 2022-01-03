@@ -2,6 +2,7 @@ const { Annoted } = require('../extra/annoted')
 const datatypes = require('./datatype')
 
 function SQLparser(sql){
+	console.log(sql)
 	var cmds = sql.split(';')
 	var sql_O = {
 		tables:[],

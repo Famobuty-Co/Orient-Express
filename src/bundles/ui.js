@@ -197,6 +197,10 @@ class Component {
 		return this
 	}
 	append(child){
+		if(typeof child == "string"){
+			this.write(child)
+			return
+		}
 		// if(typeof child != "object")
 			// throw "Uncaught TypeError: Component.appendChild: Argument 1 is not an object."
 		// if(! child instanceof Component)

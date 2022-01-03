@@ -7,6 +7,7 @@ const debug = require("./extra/console");
 class Response{
 	constructor(res,req,app){
 		this._res = res
+		this.#isopen = true
 		this._req = req
 		this.app = app
 	}
@@ -82,8 +83,12 @@ class Response{
 			this._res.end();
 		}
 	}
+	#isopen = false
 	close(){
-		this._res.end();
+		if(this.#isopen){
+			this._res.end();
+			this.#isopen = false
+		}
 	}
 }
 function parserQuery(search){
