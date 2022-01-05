@@ -16,6 +16,9 @@ class CallBack{
 }
 
 class Event{
+	register(event){
+		this.on(event,()=>{})
+	}
 	on(event,callback){
 		this["on"+event] = new CallBack(callback)
 	}

@@ -1,4 +1,4 @@
-const Table = require('./table')
+const Table = require('./_table')
 const {sqlite_exec,sqlite_init,sqlite_create} = require('./driver')
 const {Event} = require("../extra/event")
 const {Objectparser,SQLparser,Classparser} = require('./parser')

@@ -1,6 +1,6 @@
 App = require("./app")
 const {Component,create,createEvent,Document} = require("../bundles/ui");
-const Table = require('../shinjuku/table');
+const Table = require('../shinjuku/_table');
 const Database = require("../shinjuku/database");
 const { include,getFileName } = require("../extra/static");
 const acces = require('../acess')
@@ -114,7 +114,7 @@ class FastApp extends App{
 	}
 	createEntity(name){
 		var table = new FastEntity()
-		setEntity(name,table)
+		this.setEntity(name,table)
 		return table
 	}
 	getEntity(name){

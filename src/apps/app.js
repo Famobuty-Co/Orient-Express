@@ -61,6 +61,7 @@ class App extends Event{
 		}).listen(port);
 		debug.log("html route make")
 		if(this.database){
+			console.log(this.database)
 			this.database.on("connected",()=>{
 				debug.log("database connected")
 				start()

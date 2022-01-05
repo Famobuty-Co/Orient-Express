@@ -4,7 +4,6 @@ const {create, Component} = require("./ui")
 class Form extends Component{
 	constructor(data,tag){
 		super(tag||"form")
-		console.log("tagName",tag)
 		if(data instanceof Table){
 			data.columns.forEach(column=>{
 				this.addInput(column.name,{
@@ -31,7 +30,7 @@ class Form extends Component{
 				type:'form',
 				form:obj,
 			})
-			sockets.onmessage = (data)=>console.log(data)
+			// sockets.onmessage = (data)=>console.log(data)
 		})
 		this.append(submit)
 		if(Form.websocketserver){

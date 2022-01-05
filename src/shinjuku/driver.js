@@ -52,7 +52,7 @@ function sqlite_exec(database,sql,args=["cmd","json","bail"],callback){
 		if(/SELECT/.test(sql)){
 			var columns = sql.split(/select /i).slice(1).join('select').split(/ from /i)[0]
 			if(/$\*/.test(columns)){
-
+				console.log(execSync(``))
 			}else{
 				columns = columns.split(",")
 			}

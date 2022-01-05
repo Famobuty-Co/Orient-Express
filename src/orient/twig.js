@@ -274,7 +274,6 @@ env.endfor = function(condition){
 			var obj = Object.assign({},execute.env.vars)
 			obj[_for.itvar] = name
 			var code = tempexec(repeated,obj)
-			console.log(name,code)
 			value.push(code)
 		})(itvar)
 	}
@@ -282,7 +281,6 @@ env.endfor = function(condition){
 		execute.env.currentBlock = currentBlock
 		execute.env.currentBlock.array.push(value.join(''))
 		execute.env.localcontent = execute.env.currentBlock.array
-		console.log(currentBlock)
 	}else{
 		execute.env.localcontent = _for.parent
 		execute.env.localcontent.push(value.join(''))
