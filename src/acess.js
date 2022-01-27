@@ -6,7 +6,8 @@ const orient = require('./orient/index')
 function stream(file,res){
 	console.log(fs.existsSync(file),file)
 	if(fs.existsSync(file)){
-		fs.createReadStream(file).pipe(res)
+		var stream = fs.createReadStream(file) 
+		stream.pipe(res)
 	}else{
 		res.end();
 	}
@@ -21,6 +22,7 @@ acces = {
 		var file = req.decodeURL.split('/').slice(-1).join('/');
 		var dir = "./"+req.decodeURL.split('/').slice(0,-1).join('/')+"/";
 		var _mime = mime.lookup(file)
+		console.log(/image/.test(_mime)||/video/.test(_mime)||/audio/.test(_mime))
 		if(/image/.test(_mime)||/video/.test(_mime)||/audio/.test(_mime)){
 			stream(dir+file,res._res)
 		}else{
@@ -32,18 +34,24 @@ acces = {
 		var file = req.originalUrl.split('/').slice(-1).join('/');
 
 		if(file.search('.')==-1){file+="index.html"}
-
+		
 		var dir = "./"+req.originalUrl.split('/').slice(0,-1).join('/')+"/";
-		var content = loadFile(dir+file);
-		if(content){
-			if(content instanceof Array){
-				res.sendDirFile(content,file)
-			}else{
-				res.setMimeFile(dir+file)
-				res.send(content)
+
+		if(mime.isBinary(file)){
+			res.setMimeFile(dir+file)
+			stream(dir+file,res._res)
+		}else{
+			var content = loadFile(dir+file);
+			if(content){
+				if(content instanceof Array){
+					res.sendDirFile(content,file)
+				}else{
+					res.setMimeFile(dir+file)
+					res.send(content)
+				}
 			}
+			res.close()
 		}
-		res.close()
 
 		// res.sendFile("./"+req.originalUrl.split('?')[0])
 	},

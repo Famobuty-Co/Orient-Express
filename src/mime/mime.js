@@ -1,3 +1,18 @@
+const binaries = [
+	'dds',
+	'eot',
+	'gif',
+	'ico',
+	'jar',
+	'jpeg',
+	'jpg',
+	'pdf',
+	'png',
+	'swf',
+	'tga',
+	'ttf',
+	'zip',
+]
 
 const mime = {
 	default_type:"text/plain",
@@ -14,6 +29,11 @@ const mime = {
 			}
 		}
 	},
+	isBinary:function(path){
+		var ext = path.split('.').slice(-1)[0]
+		var isbin = binaries.includes(ext)
+		return isbin
+	}
 }
 mime.define(require('./types.json'))
 mime.default_type = this.default_type

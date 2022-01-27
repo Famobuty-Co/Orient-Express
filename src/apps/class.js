@@ -1,9 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { noop, loadFile } = require("../extra/static");
-const {Annoted } = require("../extra/annoted");
 const orient = require("../orient");
-const { create } = require("domain");
 App = require("./app")
 
 class Entity{
@@ -94,38 +92,9 @@ class ClassApp extends App{
 		if(! this.#controllers.has(file)){
 			var _path = path.join(process.cwd(),this.#controllersPath,file)
 			var controller = require(_path)
-			Annoted(controller)
-			var _templatesPath = this.#templatesPath
-			controller.prototype.database = this.database
-			controller.prototype.loadFile = function(file){
-				return loadFile(file)
-			}
-			controller.prototype.render = function(file,option){
-				var _path = path.join(process.cwd(),_templatesPath,file)
-				var content = loadFile(_path)
-				return orient.parse(content,option,{
-					path:path.join(process.cwd(),_templatesPath),
-				})
-			}
-			var baseURL = controller.getAnnotations().find("route")?.getAnnotationValues()[0]
-			controller.getAnnotedMethods().forEach(method=>{
-				var route = controller.getAnnotations(method).find("route");
-				if(route){
-					((m)=>{
-						var path = `${baseURL}${route.getAnnotationValues()[0]}`
-						path = path.replace(/\/+/g,"/")
-						this.addRoute(path,(req, res)=>{
-							controller._instance.response = res
-							controller._instance.app = this
-							var render = controller._instance[m](req, res)
-							if(typeof render == "string"){
-								res.send(render)
-							}
-							res.close()
-						})
-						console.log(path)
-					})(method)
-				}
+			orient.createControler(controller,{
+				templates:this.#templatesPath,
+				app:this,
 			})
 			this.#controllers.add(file)
 		}else{

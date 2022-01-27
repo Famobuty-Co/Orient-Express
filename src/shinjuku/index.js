@@ -1,5 +1,5 @@
 const { Event } = require("../extra/event");
-const Column = require("./columns");
+const {Column,Columns} = require("./columns");
 const Table = require("./table");
 
 const database = {}
@@ -14,7 +14,6 @@ class Connection extends Event{
 	}
 }
 function createTable(object){
-	console.log(object)
 	var columns = []
 	Object.keys(object).forEach(name=>{
 		var value = object[name]

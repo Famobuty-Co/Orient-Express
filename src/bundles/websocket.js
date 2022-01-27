@@ -21,11 +21,16 @@ class WebSocketClient{
 	onerror = ()=>{}
 	onmessage = ()=>{}
 	send(message){
+		if(! this.#res)return
 		var data = {
 			body:message,
 		}
 		console.log("retrun : ",data)
 		this.#res.send(JSON.stringify(data))
+		this.#res = null
+	}
+	end(){
+		this.send(null)
 	}
 	#res
 	receive(body,res){
@@ -65,10 +70,16 @@ class WebSocketServer{
 		}
 	}
 	#clients = new Array
-	constructor(route,app){
-		app.addRoute(route,(req,res)=>{
-			this.#reponse(req,res)
-		})
+	constructor(data = {}){
+		var {route,app} = data
+		if(app && route){
+			app.addRoute(route,(req,res)=>{
+				this.#reponse(req,res)
+			})
+		}
+	}
+	sendResponse(req,res){
+		this.#reponse(req,res)
 	}
 	#connection(){
 		var wsc = new WebSocketClient()
@@ -86,6 +97,7 @@ class WebSocket{
 		try{
 			fetch(this.#url,optns).then(response=>{
 				if(response.status == 200){
+					console.log(this.#url)
 					try{
 						response.json().then(json=>{
 							callback(json)
@@ -148,7 +160,7 @@ class WebSocket{
 	}
 }
 module.exports = {WebSocket,setup:(app)=>{
-	app.webSocket = new WebSokectServer(app)
+	// app.webSocket = new WebSokectServer(app)
 	
 	app.addRoute("/scripts/websocket.js",(req,res)=>{
 		res.send(WebSocket.toString())
@@ -156,7 +168,11 @@ module.exports = {WebSocket,setup:(app)=>{
 
 	app.createSocketServer = function(route = "/"){
 		app.websocketserver = route.startsWith('/')?route:`/${route}`
-		wss = new WebSocketServer(route,app)
+		wss = new WebSocketServer({route,app})
+		return wss
+	}
+	app.getSocketServer = function(){
+		wss = new WebSocketServer({})
 		return wss
 	}
 	var page = (app.constructor||{}).page;

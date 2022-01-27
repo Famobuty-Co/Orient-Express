@@ -1,3 +1,5 @@
+function getClassAnnotations(clazz){
+}
 class Annotation extends String{
 	#name = null
 	#values = []
@@ -38,6 +40,7 @@ function getAnnotations(obj){
 	var annotations;
 	switch(typeof obj){
 		case "function":
+			// console.log(obj.toString())
 			annotations = obj.toString()
 				.match(/\{(\n)*(((\s| )*)?\"([^"])*"\n?)+/i)[0]
 				.match(/".*"/)
@@ -55,18 +58,28 @@ function getAnnotations(obj){
 function Annoted(clazz){
 	var instanceClazz = new clazz
 	clazz._instance = instanceClazz
+	var that = instanceClazz
+	var LastAnnotation = null
+	var annotations = getAnnotations(that)
 	clazz.getAnnotations = function(field){
-		var that = instanceClazz[field]||instanceClazz
-		// var annotation = that.toString().match(/\{(\n)*(((\s| )*)?\"([^"])*"\n?)+/i)[0].match(/".*"/)
-		var annotations = getAnnotations(that)
-		// console.log(annotation)
+		if(field!=LastAnnotation){
+			that = instanceClazz[field]||instanceClazz
+			annotations = getAnnotations(that)
+			LastAnnotation = field
+		}
 		return annotations
 	}
-	var methods = clazz.toString().match(/([a-z;A-Z][\w\d]*( )*)\(/g)
+	const MethodExp = /((\"|[a-z;A-Z]).+?\"*( )*)\(/g
+	var methods = clazz.toString().match(MethodExp)||[]
+	// console.log(methods,clazz.toString())
 		var _methods = []
 		methods.forEach(method=>{
-			if(instanceClazz[method.slice(0,-1)])
-				_methods.push(method.slice(0,-1))
+			var methodName =  method.slice(0,-1)
+			if(/\"|\'|\`/.test(methodName[0])){
+				methodName =  methodName.slice(1,-1)
+			}
+			if(instanceClazz[methodName])
+				_methods.push(methodName)
 		})
 	clazz.getMethods = function(){
 		return _methods

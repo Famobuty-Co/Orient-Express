@@ -17,7 +17,7 @@ Object.defineProperty(orient,'free_port',{
 	},
 })
 
-orient.acces = require("./src/acess")
+orient.acess = require("./src/acess")
 orient.websocket = require("./src/socket")
 
 orient.class = require("./src/apps/class")

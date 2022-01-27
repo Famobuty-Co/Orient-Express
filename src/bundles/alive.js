@@ -19,7 +19,7 @@ function alive(){
 		}
 		ws.onclose = ()=>console.log("close")
 		ws.onmessage = (msg)=>{
-			console.log(msg)
+			if(!msg)return
 			if(msg.type == "@"){
 				var name = msg.name
 				console.log(name)

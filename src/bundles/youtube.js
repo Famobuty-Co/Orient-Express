@@ -1,6 +1,11 @@
 class YoutubeVideo{
 	constructor(url){
-		
+		const headers = Object.assign({
+			
+		})
+	}
+	getThumbs(){
+
 	}
 }
 

@@ -22,6 +22,12 @@ class Response{
 		var _mime = mime.lookup(file,"text/plain");
 		this.setMime(_mime)
 	}
+	write(text){
+		this._res.write(text)
+	}
+	redirect(pageURL){
+		this._res.end(`<script>location.assign("${pageURL}")</script>`)
+	}
 	send(text){
 		if(text instanceof Component){
 			text = text.toString()
@@ -97,11 +103,7 @@ function parserQuery(search){
 		if(search.startsWith("?"))search = search.substring(1)
 		search.split('&').forEach(data=>{
 			var [name,value] = data.split('=')
-			value = value.replace(/\%20/g," ")
-			value = value.replace(/\%C3/g,"")
-			value = value.replace(/\%A9/g,"é")
-			value = value.replace(/\%E2%82%AC/g,"€")
-			
+			value = decodeURIComponent(value)
 			query[name] = value
 		})
 	}
@@ -158,7 +160,51 @@ class Request{
 			this._req.on(event,resolve)
 		})
 	}
+	getSession(create = true){
+		// console.log("get Session",this._req.socket.localAddress,this._req.socket.localPort)
+		var id = `${this._req.socket.localAddress}:${this._req.socket.localPort}`
+		var session 
+		console.log(this.app.client,this.app.client.has(id))
+		if(this.app.client.has(id)){
+			session = this.app.client.get(id)
+		}else if(create){
+			session = new Session()
+			this.app.client.set(id,session)
+		}
+		return session
+	}
+}
+class Session{
+	#attr = new Map
+	// #address
+	// #port
+	// get id(){
+	// 	return `${this.#address}:${this.#port}`
+	// }
+	// constructor(address,port){
+	// 	this.#address = address
+	// 	this.#port = port
+	// }
+	isAuthenticated(){
+		return true
+	}
+	setAttribute(key,value){
+		this.#attr.set(key,value)
+	}
+	#data
+	authenticate(entities){
+		var entity = entities.find(entity=>{
+			var rsl = {}
+			this.#attr.forEach((value,key)=>{
+				rsl[key] = (entity[key] == value)
+			})
+			console.log(rsl)
+			return true
+		})
+		this.#data = entity
+		return true
+	}
 }
 module.exports = {
-	Request,Response
+	Request,Response,Session
 }

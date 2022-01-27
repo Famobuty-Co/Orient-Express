@@ -84,13 +84,51 @@ function separateCase(cases,args){
 	}
 }
 
+function utils_fast(args,home="/"){
+	var app = orient.fast("app")
+	var type = args.get("acess")||"free"
+	app.addRoute(home,orient.acess[type])
+	app.login(args.get("port")||orient.free_port)
+	if(args.get("show"))app.browser()
+	return app
+}
+
 function fast(args){
 	return new Promise((resolve)=>{
-		var app = orient.fast("app")
-		var type = args.get("acces")||"free"
-		app.addRoute("/",orient.acces[type])
+		utils_fast(args)
+	})
+}
+function _module(args){
+	return new Promise((resolve)=>{
+		const app = orient.fast("app")
+		var type = args.get("acess")||"free"
 		app.login(args.get("port")||orient.free_port)
 		if(args.get("show"))app.browser()
+		var isStyled = args.get("style")
+		const data = {
+			home:args.get("home")||"/",
+			title:args.get("title")||args.get("module")||"orient module app",
+			style:isStyled?`<link rel='stylesheet' type='text/css' media='screen' href='${isStyled||"main.css"}'>`:"<style></style>",
+			module:args.get("module")||"main.js",
+		}
+		const html = `<!DOCTYPE html><html><head><meta charset='utf-8'><meta http-equiv='X-UA-Compatible' content='IE=edge'>
+		<title>${data.title}</title>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+		${data.style}
+		<script>
+		const styles = document.styleSheets.item(0)
+		</script>
+		</head>
+		<body>
+			<script type="module" src='${data.module}'></script>
+		</body></html>`
+		app.addRoute(data.home,(req,res)=>{
+			if(req.originalUrl == "/"){
+				res.send(html)
+			}else{
+				orient.acess[type](req,res)
+			}
+		})
 	})
 }
 function _class(args){
@@ -212,6 +250,7 @@ function _class(args){
 }
 
 cli.add(fast)
+cli.add(/module/,_module)
 cli.add(/class/,_class)
 cli.add(/D(ata)?B(ase)?/i,function(args){
 	console.log(".help to get help")

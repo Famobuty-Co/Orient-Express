@@ -247,7 +247,7 @@ function execute(code,option,_env){
 		},
 	})
 	// console.log(execute.env.blocks)
-	if(execute.env.template){
+	if(execute.env.template && execute.env.template.content){
 		// console.log(code)
 		return execute(execute.env.template.content,execute.env.vars,execute.env)
 	}else{
@@ -327,7 +327,12 @@ env.script = function(file){
 	execute.env.localcontent.push(`<script>${content}</script>`)
 }
 env.use = function(file){
-	execute.env.localcontent.push(`<script src="${file.slice(1,-1)}"></script>`)
+	console.log(file)
+	if(file.endsWith("js\"")){
+		execute.env.localcontent.push(`<script src="${file.slice(1,-1)}"></script>`)
+	}else if(file.endsWith("css\"")){
+		execute.env.localcontent.push(`<link rel="stylesheet" href="${file.slice(1,-1)}" />`)
+	}
 }
 env.include = function(file){
 	var _path = path.join(env.path,file.slice(1,-1))
@@ -335,7 +340,7 @@ env.include = function(file){
 	execute.env.localcontent.push(content)
 }
 env.template = function(file){
-	console.log(env.path)
+	// console.log(env.path,file)
 	var _path = path.join(env.path,file.slice(1,-1))
 	var content = loadFile(_path)
 	// console.log(content,_path)

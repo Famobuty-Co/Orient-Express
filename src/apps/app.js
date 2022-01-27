@@ -9,6 +9,10 @@ const SQL = require("../shinjuku");
 
 
 class App extends Event{
+	#client = new Map()
+	get client(){
+		return this.#client
+	}
 	constructor(data){
 		super()
 		this.accesTable = new Route()
@@ -26,7 +30,7 @@ class App extends Event{
 	}
 	onrequest(req, res){
 		var action = this.findAction(req,res)
-		debug.info(req.url)
+		debug.info(req.url,action==noop)
 		if(!req.url)return
 		var _res = new web.Response(res,req,this)
 		var _req = new web.Request(res,req,this)
@@ -34,7 +38,7 @@ class App extends Event{
 				if(action==noop){
 					var errorPage = this.errorPage||this.accesTable.sort()[0]
 					if( errorPage){
-						res.end(`<script>location.assign("${errorPage}")</script>`)
+						_res.redirect(errorPage)
 					}else{
 						res.end()
 					}
@@ -56,6 +60,7 @@ class App extends Event{
 			this.show()
 			this.onready?.call()
 		}
+		console.log(this.accesTable.table)
 		http.createServer((req,res)=>{
 			this.onrequest(req,res)
 		}).listen(port);
