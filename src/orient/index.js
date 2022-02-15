@@ -83,7 +83,8 @@ const orient = {
 			})(baseURL,method);
 		})
 	},
-	parse:function (OrientHTML="",options={},env) {
+	parse:function (OrientHTML,options={},env) {
+		if(!OrientHTML)OrientHTML = ""
 		// console.log(OrientHTML)
 		// orient.automateOrientHTML.analayser(OrientHTML)
 		env = env||{}
