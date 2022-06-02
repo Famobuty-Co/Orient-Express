@@ -114,6 +114,7 @@ function _module(args){
 		const html = `<!DOCTYPE html><html><head><meta charset='utf-8'><meta http-equiv='X-UA-Compatible' content='IE=edge'>
 		<title>${data.title}</title>
 		<meta name='viewport' content='width=device-width, initial-scale=1'>
+		<link href="icon.png" rel="icon">
 		${data.style}
 		<script>
 		const styles = document.styleSheets.item(0)
